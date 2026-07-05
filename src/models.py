@@ -28,9 +28,9 @@ class Chunk:
         
         result = {}
         for f in fields(self):
-            name = f.name
-            value = getattr(self,name)
-            if name != "text":
+            name = f.name # iterate through attribute
+            value = getattr(self,name) #grab value of attribute
+            if name != "text": # only store when name doesn't equal text
                 result[name]= value
                 
         return result
