@@ -1,3 +1,5 @@
+import pytest
+
 from src.chunkers import (
     _fixed_windows,
     _window_to_char_span,
@@ -8,8 +10,14 @@ from src.chunkers import (
     _split_words,
     _recursive_split,
     _merge_small_pieces,
+    _cosine_distance,
+    _adjacent_distances,
+    _percentile,
+    _find_cut_points,
+    _group_by_cuts,
     FixedChunker,
     RecursiveChunker,
+    SemanticChunker,
     get_chunker,
 )
 from src.models import Document
@@ -26,6 +34,16 @@ def _make_doc(text: str) -> Document:
         clean_text=text,
         metadata={},
     )
+
+
+class StubEmbedder:
+    """Deterministic offline embedder for tests: looks up each text in a fixed mapping."""
+
+    def __init__(self, vectors: dict):
+        self.vectors = vectors
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [self.vectors[t] for t in texts]
 
 
 def test_fixed_windows_basic():
@@ -248,3 +266,162 @@ def test_recursive_chunker_empty_document_produces_no_chunks():
 def test_get_chunker_returns_recursive_chunker():
     chunker = get_chunker("recursive")
     assert isinstance(chunker, RecursiveChunker)
+
+
+def test_cosine_distance_identical_vectors_is_zero():
+    a = [1.0, 2.0, 3.0]
+    assert _cosine_distance(a, a) == pytest.approx(0.0)
+
+
+def test_cosine_distance_orthogonal_vectors_is_one():
+    a = [1.0, 0.0]
+    b = [0.0, 1.0]
+    assert _cosine_distance(a, b) == pytest.approx(1.0)
+
+
+def test_cosine_distance_opposite_vectors_is_two():
+    a = [1.0, 0.0]
+    b = [-1.0, 0.0]
+    assert _cosine_distance(a, b) == pytest.approx(2.0)
+
+
+def test_adjacent_distances_basic():
+    embeddings = [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
+    distances = _adjacent_distances(embeddings)
+    assert distances == pytest.approx([0.0, 1.0])
+
+
+def test_adjacent_distances_length_is_n_minus_one():
+    embeddings = [[1.0, 0.0], [0.9, 0.1], [0.5, 0.5], [0.0, 1.0]]
+    distances = _adjacent_distances(embeddings)
+    assert len(distances) == len(embeddings) - 1
+
+
+def test_adjacent_distances_single_embedding_returns_empty():
+    embeddings = [[1.0, 0.0]]
+    assert _adjacent_distances(embeddings) == []
+
+
+def test_percentile_exact_median():
+    assert _percentile([1, 2, 3, 4, 5], 50) == 3
+
+
+def test_percentile_interpolates_between_ranks():
+    assert _percentile([1, 2, 3, 4], 50) == pytest.approx(2.5)
+
+
+def test_percentile_zero_is_minimum():
+    assert _percentile([5, 1, 3], 0) == 1
+
+
+def test_percentile_hundred_is_maximum():
+    assert _percentile([5, 1, 3], 100) == 5
+
+
+def test_percentile_realistic_distance_spike():
+    values = [0.1, 0.1, 0.1, 0.9]
+    assert _percentile(values, 95) == pytest.approx(0.78)
+
+
+def test_find_cut_points_only_the_real_spike():
+    distances = [0.1, 0.1, 0.1, 0.9]
+    assert _find_cut_points(distances, 95) == [3]
+
+
+def test_find_cut_points_empty_distances():
+    assert _find_cut_points([], 95) == []
+
+
+def test_find_cut_points_uniform_distances_produce_no_cuts():
+    assert _find_cut_points([0.5, 0.5, 0.5], 50) == []
+
+
+def test_find_cut_points_multiple_spikes():
+    distances = [0.1, 0.9, 0.1, 0.8, 0.1]
+    assert _find_cut_points(distances, 50) == [1, 3]
+
+
+def test_group_by_cuts_basic():
+    pieces = ["A. ", "B. ", "C. ", "D."]
+    result = _group_by_cuts(pieces, cut_points=[1])
+    assert result == ["A. B. ", "C. D."]
+
+
+def test_group_by_cuts_no_cuts_means_one_group():
+    pieces = ["A. ", "B. "]
+    assert _group_by_cuts(pieces, cut_points=[]) == ["A. B. "]
+
+
+def test_group_by_cuts_cut_after_every_piece():
+    pieces = ["A. ", "B. ", "C."]
+    result = _group_by_cuts(pieces, cut_points=[0, 1])
+    assert result == ["A. ", "B. ", "C."]
+
+
+def test_group_by_cuts_preserves_reconstruction():
+    pieces = ["A. ", "B. ", "C. ", "D."]
+    result = _group_by_cuts(pieces, cut_points=[1])
+    assert "".join(result) == "".join(pieces)
+
+
+def test_semantic_chunker_cuts_at_topic_shift():
+    text = "Cats are great pets. Cats like to nap. Stock prices rose today."
+    doc = _make_doc(text)
+    vectors = {
+        "Cats are great pets. ": [1.0, 0.0],
+        "Cats like to nap. ": [0.9, 0.1],
+        "Stock prices rose today.": [0.0, 1.0],
+    }
+    chunker = SemanticChunker(embedder=StubEmbedder(vectors), percentile=50)
+    chunks = chunker.chunk(doc)
+
+    assert [c.text for c in chunks] == [
+        "Cats are great pets. Cats like to nap. ",
+        "Stock prices rose today.",
+    ]
+    assert all(c.chunking_strategy == "semantic" for c in chunks)
+    assert all(c.section_heading is None for c in chunks)
+    assert [c.chunk_index for c in chunks] == [0, 1]
+
+
+def test_semantic_chunker_tracks_correct_char_offsets():
+    text = "Cats are great pets. Cats like to nap. Stock prices rose today."
+    doc = _make_doc(text)
+    vectors = {
+        "Cats are great pets. ": [1.0, 0.0],
+        "Cats like to nap. ": [0.9, 0.1],
+        "Stock prices rose today.": [0.0, 1.0],
+    }
+    chunker = SemanticChunker(embedder=StubEmbedder(vectors), percentile=50)
+    chunks = chunker.chunk(doc)
+    for c in chunks:
+        assert doc.clean_text[c.start_char:c.end_char] == c.text
+
+
+def test_semantic_chunker_single_sentence_is_one_chunk():
+    text = "Only one sentence here."
+    doc = _make_doc(text)
+    vectors = {"Only one sentence here.": [1.0, 0.0]}
+    chunker = SemanticChunker(embedder=StubEmbedder(vectors), percentile=95)
+    chunks = chunker.chunk(doc)
+    assert len(chunks) == 1
+    assert chunks[0].text == text
+
+
+def test_semantic_chunker_empty_document_produces_no_chunks():
+    doc = _make_doc("")
+    chunker = SemanticChunker(embedder=StubEmbedder({}), percentile=95)
+    assert chunker.chunk(doc) == []
+
+
+def test_get_chunker_returns_semantic_chunker():
+    chunker = get_chunker("semantic", embedder=StubEmbedder({}))
+    assert isinstance(chunker, SemanticChunker)
+
+
+def test_get_chunker_semantic_requires_embedder():
+    try:
+        get_chunker("semantic")
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
