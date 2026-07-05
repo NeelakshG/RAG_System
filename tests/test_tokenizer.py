@@ -1,5 +1,5 @@
 """Tests for src/tokenizer.py."""
-from src.tokenizer import tokenize, count_tokens
+from src.tokenizer import tokenize, count_tokens, find_token_spans
 
 
 def test_tokenize_basic():
@@ -29,3 +29,17 @@ def test_count_tokens_whitespace_only():
 
 def test_underscored_identifier_is_one_token():
     assert tokenize("northwind_sdk") == ["northwind_sdk"]
+
+
+def test_find_token_spans_basic():
+    text = "The ERR_2043 error"
+    spans = find_token_spans(text)
+    assert spans == [(0, 3), (4, 12), (13, 18)]
+    assert text[0:3] == "The"
+    assert text[4:12] == "ERR_2043"
+    assert text[13:18] == "error"
+
+
+def test_find_token_spans_matches_tokenize_count():
+    text = "ERR_2043, retry?"
+    assert len(find_token_spans(text)) == len(tokenize(text))
