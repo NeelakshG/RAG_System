@@ -1,3 +1,4 @@
+import math
 import re
 
 from src.models import Document, Chunk
@@ -232,6 +233,117 @@ class RecursiveChunker(Chunker):
         return chunks
 
 
+def _cosine_distance(a: list[float], b: list[float]) -> float:
+    """Return 1 - cosine_similarity(a, b)."""
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(y * y for y in b))
+    similarity = dot / (norm_a * norm_b)
+    return 1 - similarity
+
+
+def _adjacent_distances(embeddings: list[list[float]]) -> list[float]:
+    """Return cosine distance between each pair of adjacent embeddings."""
+    return [
+        _cosine_distance(embeddings[i], embeddings[i + 1])
+        for i in range(len(embeddings) - 1)
+    ]
+
+
+def _percentile(values: list[float], pct: float) -> float:
+    """Return the pct-th percentile (0-100) of values, via linear interpolation between closest ranks."""
+    sorted_values = sorted(values)
+    n = len(sorted_values)
+    rank = (pct / 100) * (n - 1)      # fractional index into the sorted list
+
+    lower = math.floor(rank)
+    upper = math.ceil(rank)
+    if lower == upper:                 # rank landed exactly on an index -- no interpolation needed
+        return sorted_values[lower]
+
+    fraction = rank - lower            # how far rank sits between lower and upper
+    return sorted_values[lower] + fraction * (sorted_values[upper] - sorted_values[lower])
+
+
+def _find_cut_points(distances: list[float], percentile: float) -> list[int]:
+    """Return indices i where distances[i] exceeds the percentile threshold -- a cut occurs after sentence i."""
+    if not distances:
+        return []
+
+    threshold = _percentile(distances, percentile)
+    return [i for i, d in enumerate(distances) if d > threshold]
+
+
+def _group_by_cuts(pieces: list[str], cut_points: list[int]) -> list[str]:
+    """Join consecutive pieces into groups, splitting immediately after each index in cut_points."""
+    cut_set = set(cut_points)
+    groups = []
+    current = []
+
+    for i, piece in enumerate(pieces):
+        current.append(piece)
+        if i in cut_set:
+            groups.append("".join(current))
+            current = []
+
+    if current:                     # flush whatever's left after the last cut
+        groups.append("".join(current))
+
+    return groups
+
+
+class SemanticChunker(Chunker):
+    """Embedding-based chunker: cuts where cosine distance between adjacent
+    sentence embeddings exceeds a percentile threshold for this document.
+
+    The embedder is injected (must expose .embed(texts) -> list[list[float]])
+    so this module never imports an embedding library directly.
+    """
+
+    def __init__(self, embedder, percentile: float = 95):
+        self.embedder = embedder
+        self.percentile = percentile
+
+    def chunk(self, doc: Document) -> list[Chunk]:
+        text = doc.clean_text
+        sentences = _split_sentences(text)
+
+        if not sentences:
+            return []
+
+        embeddings = self.embedder.embed(sentences)
+        distances = _adjacent_distances(embeddings)
+        cut_points = _find_cut_points(distances, self.percentile)
+        groups = _group_by_cuts(sentences, cut_points)
+
+        chunks = []
+        offset = 0
+        for i, piece in enumerate(groups):
+            if not piece:
+                continue
+
+            char_start = offset
+            char_end = offset + len(piece)
+            chunks.append(
+                Chunk(
+                    chunk_id=f"{doc.doc_id}::{i}",
+                    doc_id=doc.doc_id,
+                    source_name=doc.source_name,
+                    chunk_index=i,
+                    text=piece,
+                    section_heading=None,   # semantic chunking doesn't track structure
+                    chunking_strategy="semantic",
+                    char_count=len(piece),
+                    token_count=count_tokens(piece),
+                    start_char=char_start,
+                    end_char=char_end,
+                )
+            )
+            offset = char_end
+
+        return chunks
+
+
 def get_chunker(strategy: str, config=None, embedder=None) -> Chunker:
     """Factory: returns the right Chunker subclass for the given strategy name."""
     if strategy == "fixed":
@@ -241,4 +353,9 @@ def get_chunker(strategy: str, config=None, embedder=None) -> Chunker:
     if strategy == "recursive":
         max_tokens = getattr(config, "max_tokens", 256)
         return RecursiveChunker(max_tokens=max_tokens)
+    if strategy == "semantic":
+        if embedder is None:
+            raise ValueError("semantic chunking requires an embedder")
+        percentile = getattr(config, "semantic_percentile", 95)
+        return SemanticChunker(embedder=embedder, percentile=percentile)
     raise NotImplementedError(f"chunking strategy not yet implemented: {strategy}")
