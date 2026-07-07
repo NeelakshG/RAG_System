@@ -27,7 +27,7 @@ def _html_to_clean_text(html: str) -> str:
         for heading in soup.find_all(f"h{level}"):
             heading.replace_with(f"\n{'#' * level} {heading.get_text(strip=True)}\n")
 
-    return soup.get_text(separator=" ", strip=True)
+    return soup.get_text(separator=" ").strip()
 
 
 def load_file(path: Path, base_dir: Path) -> Document:
