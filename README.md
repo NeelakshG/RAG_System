@@ -25,8 +25,8 @@ time, rather than scaffolded in bulk.
 - [x] `src/models.py` — `Document` / `Chunk` dataclasses
 - [x] `src/loaders.py` — multi-format document loader (md/txt/html/pdf)
 - [x] `src/chunkers.py` — fixed-size, recursive, and semantic chunking strategies
-- [ ] `scripts/make_corpus.py` — synthetic corpus generator
-- [ ] `src/indexer.py` — dense (Chroma) + sparse (BM25) indexing
+- [x] `scripts/make_corpus.py` — synthetic corpus generator
+- [x] `src/indexer.py` — dense (Chroma) + sparse (BM25) indexing
 - [ ] `ingest.py` — end-to-end ingestion entry point
 
 **Phase 2 — Hybrid retrieval** (dense + sparse + RRF + cross-encoder rerank) — not started
