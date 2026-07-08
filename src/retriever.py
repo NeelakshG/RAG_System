@@ -50,9 +50,10 @@ def rerank(
     candidates: list[tuple[str, str]],
     reranker,
     top_n: int = 5,
-) -> list[str]:
+) -> list[tuple[str, float]]:
     """Score each (chunk_id, chunk_text) candidate against the query using
-    the cross-encoder, return the top_n chunk_ids sorted by score, best first.
+    the cross-encoder, return the top_n (chunk_id, score) pairs sorted by
+    score, best first.
     """
     chunk_ids = [chunk_id for chunk_id, text in candidates]
     texts = [text for chunk_id, text in candidates]
@@ -60,8 +61,7 @@ def rerank(
     scores = reranker.score(query, texts)
 
     ranked_pairs = sorted(zip(chunk_ids, scores), key=lambda pair: pair[1], reverse=True)
-    top = ranked_pairs[:top_n]
-    return [chunk_id for chunk_id, score in top]
+    return ranked_pairs[:top_n]
 
 
 def retrieve(
@@ -72,11 +72,11 @@ def retrieve(
     reranker,
     config=None,
     use_hybrid: bool = True,
-) -> list[str]:
+) -> list[tuple[str, float]]:
     """Run the full retrieval funnel for one query: embed + tokenize ->
     dense/sparse search -> RRF fusion (skipped if use_hybrid=False) ->
     fetch candidate text -> cross-encoder rerank. Returns the final
-    chunk_ids, best first.
+    (chunk_id, score) pairs, best first.
     """
     dense_k = getattr(config, "dense_k", 10)
     sparse_k = getattr(config, "sparse_k", 10)
