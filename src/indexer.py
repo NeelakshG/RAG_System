@@ -72,6 +72,16 @@ class DenseIndex:
 
     def count(self) -> int:
         return self._collection.count()
+    
+    
+    def query(self, query_embedding: list[float], k: int = 10) -> list[str]:
+        if not query_embedding:
+            return []
+
+        result = self._collection.query(query_embeddings=[query_embedding], n_results=k)
+        return  result["ids"][0]
+        
+    
 
 
 class SparseIndex:
@@ -100,6 +110,21 @@ class SparseIndex:
         index.chunk_ids = data["chunk_ids"]
         index.bm25 = data["bm25"]
         return index
+    
+    def query(self, query_tokens: list[str], k: int = 10) -> list[str]:
+        if self.bm25 is None:
+            return []
+
+        score = self.bm25.get_scores(query_tokens)
+        paired =zip(self.chunk_ids, score)
+        ranked = sorted(paired, key=lambda pair: pair[1], reverse = True)
+        top_k = ranked[:k]
+        result = []
+        for chunk_id, score in top_k:
+            result.append(chunk_id)
+            
+        return result
+        
 
 
 def build_indexes(chunks: list[Chunk], embedder, config=None) -> dict:

@@ -9,6 +9,7 @@ from src.indexer import (
     build_indexes,
 )
 from src.models import Chunk
+from src.tokenizer import tokenize
 
 
 def _make_chunk(chunk_id="doc1::0", text="hello world", section_heading=None) -> Chunk:
@@ -127,6 +128,18 @@ def test_dense_index_add_empty_is_noop(tmp_path):
     assert index.count() == 0
 
 
+def test_dense_index_query_returns_closest_first(tmp_path):
+    index = DenseIndex(persist_dir=str(tmp_path / "chroma"))
+    index.add(
+        [_make_chunk(chunk_id="a::0"), _make_chunk(chunk_id="b::0"), _make_chunk(chunk_id="c::0")],
+        [[1.0, 0.0], [0.9, 0.1], [0.0, 1.0]],
+    )
+
+    results = index.query([1.0, 0.0], k=2)
+
+    assert results == ["a::0", "b::0"]
+
+
 # --- SparseIndex ---
 
 def test_sparse_index_build_tracks_chunk_ids():
@@ -139,6 +152,21 @@ def test_sparse_index_build_tracks_chunk_ids():
 
     assert index.chunk_ids == ["doc1::0", "doc2::0"]
     assert index.bm25 is not None
+
+
+def test_sparse_index_query_ranks_by_relevance():
+    chunks = [
+        _make_chunk(chunk_id="a::0", text="unrelated content about cats"),
+        _make_chunk(chunk_id="b::0", text="ERR_2043 troubleshooting guide"),
+        _make_chunk(chunk_id="c::0", text="something else entirely"),
+    ]
+    index = SparseIndex()
+    index.build(chunks)
+
+    results = index.query(tokenize("ERR_2043"), k=2)
+
+    assert results[0] == "b::0"
+    assert len(results) == 2
 
 
 def test_sparse_index_save_and_load_roundtrip(tmp_path):
