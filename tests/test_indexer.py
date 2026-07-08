@@ -140,6 +140,23 @@ def test_dense_index_query_returns_closest_first(tmp_path):
     assert results == ["a::0", "b::0"]
 
 
+def test_dense_index_get_texts_returns_matching_text(tmp_path):
+    index = DenseIndex(persist_dir=str(tmp_path / "chroma"))
+    index.add(
+        [_make_chunk(chunk_id="a::0", text="alpha text"), _make_chunk(chunk_id="b::0", text="beta text")],
+        [[1.0, 0.0], [0.0, 1.0]],
+    )
+
+    texts = index.get_texts(["b::0", "a::0"])
+
+    assert texts == {"a::0": "alpha text", "b::0": "beta text"}
+
+
+def test_dense_index_get_texts_empty_input_returns_empty_dict(tmp_path):
+    index = DenseIndex(persist_dir=str(tmp_path / "chroma"))
+    assert index.get_texts([]) == {}
+
+
 # --- SparseIndex ---
 
 def test_sparse_index_build_tracks_chunk_ids():
