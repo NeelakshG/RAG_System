@@ -80,8 +80,14 @@ class DenseIndex:
 
         result = self._collection.query(query_embeddings=[query_embedding], n_results=k)
         return  result["ids"][0]
-        
-    
+
+    def get_texts(self, chunk_ids: list[str]) -> dict[str, str]:
+        """Fetch the stored text for each chunk_id directly, no similarity search."""
+        if not chunk_ids:
+            return {}
+        result = self._collection.get(ids=chunk_ids)
+        return dict(zip(result["ids"], result["documents"]))
+
 
 
 class SparseIndex:

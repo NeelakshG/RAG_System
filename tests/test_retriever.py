@@ -1,4 +1,4 @@
-from src.retriever import reciprocal_rank_fusion, rerank
+from src.retriever import reciprocal_rank_fusion, rerank, retrieve
 
 
 def test_reciprocal_rank_fusion_rewards_chunks_in_both_lists():
@@ -50,3 +50,43 @@ def test_rerank_respects_top_n():
     result = rerank("alpha beta gamma", candidates, StubReranker(), top_n=1)
 
     assert len(result) == 1
+
+
+class StubDenseIndex:
+    _TEXTS = {"a::0": "alpha text", "b::0": "beta text", "c::0": "gamma text", "d::0": "delta text"}
+
+    def query(self, query_embedding, k=10):
+        return ["a::0", "b::0", "c::0"][:k]
+
+    def get_texts(self, chunk_ids):
+        return {cid: self._TEXTS[cid] for cid in chunk_ids}
+
+
+class StubSparseIndex:
+    def query(self, query_tokens, k=10):
+        return ["b::0", "d::0"][:k]
+
+
+class StubQueryEmbedder:
+    def embed(self, texts):
+        return [[1.0, 0.0] for _ in texts]
+
+
+def test_retrieve_hybrid_runs_full_funnel():
+    result = retrieve(
+        "some query", StubDenseIndex(), StubSparseIndex(),
+        StubQueryEmbedder(), StubReranker(),
+        use_hybrid=True,
+    )
+
+    assert "b::0" in result   # found by both dense and sparse -- should survive to the end
+
+
+def test_retrieve_dense_only_skips_sparse():
+    result = retrieve(
+        "some query", StubDenseIndex(), StubSparseIndex(),
+        StubQueryEmbedder(), StubReranker(),
+        use_hybrid=False,
+    )
+
+    assert set(result).issubset({"a::0", "b::0", "c::0"})   # never touches sparse's d::0
