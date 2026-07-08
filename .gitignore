@@ -24,3 +24,6 @@ Thumbs.db
 
 # Claude Code
 .claude/
+
+# Personal notes (not part of the repo)
+BUILD_STEPS.md
