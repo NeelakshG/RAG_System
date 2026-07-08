@@ -40,7 +40,7 @@ def test_rerank_picks_highest_scoring_candidate_first():
 
     result = rerank(query, candidates, StubReranker(), top_n=2)
 
-    assert result[0] == "a::0"   # shares both query words -- clear winner
+    assert result[0][0] == "a::0"   # shares both query words -- clear winner
     assert len(result) == 2
 
 
@@ -79,7 +79,8 @@ def test_retrieve_hybrid_runs_full_funnel():
         use_hybrid=True,
     )
 
-    assert "b::0" in result   # found by both dense and sparse -- should survive to the end
+    result_ids = [chunk_id for chunk_id, score in result]
+    assert "b::0" in result_ids   # found by both dense and sparse -- should survive to the end
 
 
 def test_retrieve_dense_only_skips_sparse():
@@ -89,4 +90,5 @@ def test_retrieve_dense_only_skips_sparse():
         use_hybrid=False,
     )
 
-    assert set(result).issubset({"a::0", "b::0", "c::0"})   # never touches sparse's d::0
+    result_ids = {chunk_id for chunk_id, score in result}
+    assert result_ids.issubset({"a::0", "b::0", "c::0"})   # never touches sparse's d::0
