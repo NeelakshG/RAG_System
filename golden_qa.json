@@ -1,0 +1,422 @@
+[
+  {
+    "id": "lookup_001",
+    "question": "What does ERR_2043 indicate?",
+    "category": "lookup",
+    "expected_answer": "A document submitted through the web portal was silently dropped before reaching the processing queue.",
+    "expected_source_docs": [
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "lookup_002",
+    "question": "How should a document affected by ERR_2043 be resubmitted?",
+    "category": "lookup",
+    "expected_answer": "Resubmit it with the docctl submit CLI.",
+    "expected_source_docs": [
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "lookup_003",
+    "question": "What does ERR_1004 mean?",
+    "category": "lookup",
+    "expected_answer": "The submitted document uses an unsupported file format.",
+    "expected_source_docs": [
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "lookup_004",
+    "question": "Which file extensions are supported by the intake service?",
+    "category": "lookup",
+    "expected_answer": "md, txt, and html.",
+    "expected_source_docs": [
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "lookup_005",
+    "question": "What does ERR_3390 indicate?",
+    "category": "lookup",
+    "expected_answer": "The document exceeds the maximum size limit.",
+    "expected_source_docs": [
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "lookup_006",
+    "question": "At approximately what size do documents begin failing intake?",
+    "category": "lookup",
+    "expected_answer": "Typically over 5 MB.",
+    "expected_source_docs": [
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "lookup_007",
+    "question": "What is the signature of calculate_retry_backoff?",
+    "category": "lookup",
+    "expected_answer": "def calculate_retry_backoff(attempt: int, base: float = 1.5) -> float:",
+    "expected_source_docs": [
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "lookup_008",
+    "question": "What is the default base multiplier for calculate_retry_backoff?",
+    "category": "lookup",
+    "expected_answer": "1.5",
+    "expected_source_docs": [
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "lookup_009",
+    "question": "Which endpoint accepts a document for ingestion?",
+    "category": "lookup",
+    "expected_answer": "POST /v1/documents",
+    "expected_source_docs": [
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "lookup_010",
+    "question": "What status code is returned when a document exceeds the configured size limit?",
+    "category": "lookup",
+    "expected_answer": "413",
+    "expected_source_docs": [
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "lookup_011",
+    "question": "Which endpoint reports the intake service's health?",
+    "category": "lookup",
+    "expected_answer": "GET /v1/health",
+    "expected_source_docs": [
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "lookup_012",
+    "question": "What is the default value of MAX_RETRY_COUNT?",
+    "category": "lookup",
+    "expected_answer": "3",
+    "expected_source_docs": [
+      "config_guide.txt"
+    ]
+  },
+  {
+    "id": "lookup_013",
+    "question": "What is the default value of CACHE_TTL_SECONDS?",
+    "category": "lookup",
+    "expected_answer": "900 seconds.",
+    "expected_source_docs": [
+      "config_guide.txt"
+    ]
+  },
+  {
+    "id": "lookup_014",
+    "question": "What is the default LOG_LEVEL?",
+    "category": "lookup",
+    "expected_answer": "INFO",
+    "expected_source_docs": [
+      "config_guide.txt"
+    ]
+  },
+  {
+    "id": "lookup_015",
+    "question": "Where should engineers ask questions about local setup issues?",
+    "category": "lookup",
+    "expected_answer": "In the #platform-eng channel.",
+    "expected_source_docs": [
+      "onboarding.md"
+    ]
+  },
+  {
+    "id": "lookup_016",
+    "question": "What content types does POST /v1/documents accept?",
+    "category": "lookup",
+    "expected_answer": "text/markdown, text/plain, and text/html.",
+    "expected_source_docs": [
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "lookup_017",
+    "question": "What information does GET /v1/health return about ingestion operations?",
+    "category": "lookup",
+    "expected_answer": "Queue depth and the last successful ingestion timestamp.",
+    "expected_source_docs": [
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "lookup_018",
+    "question": "Which log levels are allowed, and which one is the default?",
+    "category": "lookup",
+    "expected_answer": "DEBUG, INFO, WARNING, and ERROR are allowed; INFO is the default.",
+    "expected_source_docs": [
+      "config_guide.txt"
+    ]
+  },
+  {
+    "id": "lookup_019",
+    "question": "What access should a new engineer request during their first week?",
+    "category": "lookup",
+    "expected_answer": "Access to the internal wiki and the team's shared drive.",
+    "expected_source_docs": [
+      "onboarding.md"
+    ]
+  },
+  {
+    "id": "lookup_020",
+    "question": "Which channels should a new engineer join, and how often is the on-call rotation posted?",
+    "category": "lookup",
+    "expected_answer": "Join #platform-eng and #on-call; the rotation is posted weekly in #on-call.",
+    "expected_source_docs": [
+      "onboarding.md"
+    ]
+  },
+  {
+    "id": "lookup_021",
+    "question": "Where are architecture diagrams stored, and under what section?",
+    "category": "lookup",
+    "expected_answer": "On the internal wiki, under Platform > Design.",
+    "expected_source_docs": [
+      "onboarding.md"
+    ]
+  },
+  {
+    "id": "multihop_001",
+    "question": "A portal upload never reaches the queue and no confirmation email arrives. Which error is this, and which endpoint would show the current queue depth to help confirm it's stuck?",
+    "category": "multi-hop",
+    "expected_answer": "ERR_2043; GET /v1/health reports queue depth.",
+    "expected_source_docs": [
+      "troubleshooting.md",
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "multihop_002",
+    "question": "ERR_1004 rejects a document for having an unsupported format. Which content types does the intake endpoint actually accept, and what's the safest format to convert to?",
+    "category": "multi-hop",
+    "expected_answer": "text/markdown, text/plain, and text/html (per POST /v1/documents); Markdown is the recommended conversion target.",
+    "expected_source_docs": [
+      "troubleshooting.md",
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "multihop_003",
+    "question": "What error and HTTP status code correspond to an oversized document?",
+    "category": "multi-hop",
+    "expected_answer": "ERR_3390 and HTTP 413.",
+    "expected_source_docs": [
+      "troubleshooting.md",
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "multihop_004",
+    "question": "What retry function is available, and what default maximum retry count should constrain it?",
+    "category": "multi-hop",
+    "expected_answer": "calculate_retry_backoff, constrained by a default MAX_RETRY_COUNT of 3.",
+    "expected_source_docs": [
+      "api_reference.html",
+      "config_guide.txt"
+    ]
+  },
+  {
+    "id": "multihop_005",
+    "question": "What default base multiplier and maximum retry count are documented for retries?",
+    "category": "multi-hop",
+    "expected_answer": "A base multiplier of 1.5 and a maximum retry count of 3.",
+    "expected_source_docs": [
+      "api_reference.html",
+      "config_guide.txt"
+    ]
+  },
+  {
+    "id": "multihop_006",
+    "question": "What retry behavior must internal services follow when a downstream service provides a Retry-After header?",
+    "category": "multi-hop",
+    "expected_answer": "Use exponential backoff, stay within the configured attempt limit, and respect Retry-After.",
+    "expected_source_docs": [
+      "api_reference.html",
+      "config_guide.txt"
+    ]
+  },
+  {
+    "id": "multihop_007",
+    "question": "If GET /v1/health reports a downstream dependency failure, what retry function would handle a subsequent failed request, and how many attempts would it get by default before the caller sees an error?",
+    "category": "multi-hop",
+    "expected_answer": "calculate_retry_backoff computes the delay for each attempt; by default the caller gets up to MAX_RETRY_COUNT (3) attempts before the error is surfaced.",
+    "expected_source_docs": [
+      "api_reference.html",
+      "config_guide.txt"
+    ]
+  },
+  {
+    "id": "noanswer_001",
+    "question": "What is the value of MAX_RETRY_COUNT in the staging environment?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "noanswer_002",
+    "question": "What is the exact configured document size limit in bytes?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "noanswer_003",
+    "question": "Who owns the document intake service?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "noanswer_004",
+    "question": "What authentication token is required for POST /v1/documents?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "noanswer_005",
+    "question": "What response body does POST /v1/documents return after a successful upload?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "noanswer_006",
+    "question": "What is the production value of CACHE_TTL_SECONDS?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "noanswer_007",
+    "question": "What day is the new engineer's onboarding buddy meeting scheduled?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "noanswer_008",
+    "question": "Who is currently on call?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "noanswer_009",
+    "question": "How long does platform support usually take to respond?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "noanswer_010",
+    "question": "What delay does calculate_retry_backoff return for attempt 4?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "noanswer_011",
+    "question": "What should I set the log level to?",
+    "category": "no-answer",
+    "expected_answer": "I don't know.",
+    "expected_source_docs": []
+  },
+  {
+    "id": "ambiguous_001",
+    "question": "How do I fix the upload issue?",
+    "category": "ambiguous",
+    "expected_answer": "Ask which upload symptom or error applies, or explain the fixes for ERR_2043, ERR_1004, and ERR_3390.",
+    "expected_source_docs": [
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "ambiguous_002",
+    "question": "Why was my document rejected?",
+    "category": "ambiguous",
+    "expected_answer": "Clarify whether it was rejected for an unsupported format or for exceeding the size limit.",
+    "expected_source_docs": [
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "ambiguous_003",
+    "question": "What should I do when document intake fails?",
+    "category": "ambiguous",
+    "expected_answer": "Ask for the symptom or error code because the fix differs for ERR_2043, ERR_1004, and ERR_3390.",
+    "expected_source_docs": [
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "ambiguous_004",
+    "question": "What counts as a document that's too large?",
+    "category": "ambiguous",
+    "expected_answer": "Ambiguous — could mean ERR_3390's documented ~5MB size ceiling, or the separate, undocumented buffer size referenced in ERR_2043's cause; only the ~5MB figure is actually specified.",
+    "expected_source_docs": [
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "ambiguous_005",
+    "question": "How long does the system wait?",
+    "category": "ambiguous",
+    "expected_answer": "Clarify whether this refers to retry delay or cache lifetime; only the cache default is fixed at 900 seconds.",
+    "expected_source_docs": [
+      "api_reference.html",
+      "config_guide.txt"
+    ]
+  },
+  {
+    "id": "ambiguous_006",
+    "question": "Which endpoint should I use?",
+    "category": "ambiguous",
+    "expected_answer": "Ask whether the user wants to ingest a document or check service health.",
+    "expected_source_docs": [
+      "api_reference.html"
+    ]
+  },
+  {
+    "id": "ambiguous_007",
+    "question": "Where can I find the status?",
+    "category": "ambiguous",
+    "expected_answer": "Clarify whether the user means service health, queue status, ingestion status, or the on-call rotation.",
+    "expected_source_docs": [
+      "api_reference.html",
+      "onboarding.md"
+    ]
+  },
+  {
+    "id": "ambiguous_008",
+    "question": "Where should I ask for help?",
+    "category": "ambiguous",
+    "expected_answer": "Clarify whether this is a local setup question, an upload issue, or a request for platform support.",
+    "expected_source_docs": [
+      "onboarding.md",
+      "troubleshooting.md"
+    ]
+  },
+  {
+    "id": "ambiguous_009",
+    "question": "Where are the platform documents?",
+    "category": "ambiguous",
+    "expected_answer": "Clarify whether the user means architecture diagrams on the internal wiki, shared files, or repository documentation.",
+    "expected_source_docs": [
+      "onboarding.md"
+    ]
+  }
+]
