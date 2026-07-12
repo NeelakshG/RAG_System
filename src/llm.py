@@ -30,16 +30,19 @@ class OllamaClient:
         model: str = "llama3.1",
         host: str = "http://localhost:11434",
         timeout: float = 60.0,
+        temperature: float = 0.0,
     ):
         self.model = model
         self.host = host
         self.timeout = timeout
+        self.temperature = temperature
 
     def generate(self, prompt: str) -> str:
         payload = {
             "model": self.model,
             "prompt": prompt,
             "stream": False,
+            "options": {"temperature": self.temperature},
         }
         response = requests.post(
             f"{self.host}/api/generate",
@@ -56,10 +59,26 @@ class OllamaClient:
 
 CITATION_PATTERN = re.compile(r"\[(\d+)\]")
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
+CITATION_ONLY_PATTERN = re.compile(r"^(?:\[\d+\]\s*)+$")
+
+
+def _merge_trailing_citations(sentences: list[str]) -> list[str]:
+    """A citation placed after the sentence's closing punctuation (e.g.
+    "...email. [1]") splits off as its own fragment that's nothing but the
+    marker itself. Fold it back onto the previous sentence instead of
+    treating a bare "[1]" as its own claim.
+    """
+    merged: list[str] = []
+    for sentence in sentences:
+        if merged and CITATION_ONLY_PATTERN.match(sentence):
+            merged[-1] = f"{merged[-1]} {sentence}"
+        else:
+            merged.append(sentence)
+    return merged
 
 
 def extract_claims(answer: str) -> list[tuple[str, list[int]]]:
-    sentences = SENTENCE_SPLIT_PATTERN.split(answer.strip())
+    sentences = _merge_trailing_citations(SENTENCE_SPLIT_PATTERN.split(answer.strip()))
     claims = []
     for sentence in sentences:
         if not sentence:
