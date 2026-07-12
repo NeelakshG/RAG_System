@@ -5,7 +5,7 @@ class Document: #One loaded source file
     doc_id:str
     source_path:str
     source_name:str
-    fmt:str # file type "md" | "txt" | "html"
+    fmt:str # file type "md" | "txt" | "html" | "docx"
     raw_text:str
     clean_text:str
     metadata:dict
