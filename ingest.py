@@ -6,7 +6,7 @@ from src.indexer import build_indexes
 from src.loaders import load_file
 from src.models import Chunk, Document
 
-_SUPPORTED_EXTENSIONS = {"md", "txt", "html"}
+_SUPPORTED_EXTENSIONS = {"md", "txt", "html", "docx"}
 
 
 def discover_files(corpus_dir: Path) -> list[Path]:
