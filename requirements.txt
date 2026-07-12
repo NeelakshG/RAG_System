@@ -41,6 +41,7 @@ joblib==1.5.3
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 kubernetes==36.0.2
+lxml==6.1.1
 markdown-it-py==4.2.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
@@ -77,6 +78,7 @@ PyPika==0.51.1
 pyproject_hooks==1.2.0
 pytest==9.1.1
 python-dateutil==2.9.0.post0
+python-docx==1.2.0
 python-dotenv==1.2.2
 python-multipart==0.0.32
 PyYAML==6.0.3
