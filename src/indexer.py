@@ -88,6 +88,38 @@ class DenseIndex:
         result = self._collection.get(ids=chunk_ids)
         return dict(zip(result["ids"], result["documents"]))
 
+    def get_chunks(self, chunk_ids: list[str]) -> list[Chunk]:
+        """Rehydrate full Chunk objects (text + metadata) for the given ids,
+        in the same order as chunk_ids. section_heading defaults back to None
+        since Chroma metadata drops it when it was None at insert time.
+        """
+        if not chunk_ids:
+            return []
+        result = self._collection.get(ids=chunk_ids)
+        by_id = dict(zip(result["ids"], zip(result["documents"], result["metadatas"])))
+
+        chunks = []
+        for chunk_id in chunk_ids:
+            if chunk_id not in by_id:
+                continue
+            text, metadata = by_id[chunk_id]
+            fields = {"section_heading": None, **metadata}
+            chunks.append(Chunk(text=text, **fields))
+        return chunks
+
+    def list_documents(self) -> list[dict]:
+        """Group every indexed chunk's metadata by source doc -- there's no
+        separate document registry, so this IS the document view.
+        """
+        result = self._collection.get()
+        docs: dict[str, dict] = {}
+        for metadata in result["metadatas"]:
+            name = metadata["source_name"]
+            entry = docs.setdefault(name, {"source_name": name, "chunk_count": 0, "total_tokens": 0})
+            entry["chunk_count"] += 1
+            entry["total_tokens"] += metadata.get("token_count", 0)
+        return [docs[name] for name in sorted(docs)]
+
 
 
 class SparseIndex:
