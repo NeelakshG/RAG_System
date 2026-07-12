@@ -1,8 +1,11 @@
+import re
 from pathlib import Path
 
 from bs4 import BeautifulSoup
 
 from src.models import Document
+
+_DOCX_HEADING_PATTERN = re.compile(r"Heading (\d+)")
 
 
 def _detect_format(path: Path) -> str:
@@ -30,6 +33,36 @@ def _html_to_clean_text(html: str) -> str:
     return soup.get_text(separator=" ").strip()
 
 
+def _docx_to_texts(path: Path) -> tuple[str, str]:
+    """Extract paragraphs from a .docx file. Word's built-in "Heading N"
+    paragraph styles become markdown '#' * N headings so the chunkers'
+    heading-based structure detection works the same as for md/html.
+    Returns (raw_text, clean_text): raw_text is the plain paragraph text
+    with no heading markup; clean_text has headings converted.
+    """
+    from docx import Document as DocxDocument
+
+    docx_doc = DocxDocument(str(path))
+
+    raw_lines = []
+    clean_lines = []
+    for paragraph in docx_doc.paragraphs:
+        text = paragraph.text.strip()
+        if not text:
+            continue
+        raw_lines.append(text)
+
+        style_name = paragraph.style.name if paragraph.style else ""
+        match = _DOCX_HEADING_PATTERN.match(style_name)
+        if match:
+            level = min(int(match.group(1)), 6)
+            clean_lines.append(f"{'#' * level} {text}")
+        else:
+            clean_lines.append(text)
+
+    return "\n\n".join(raw_lines), "\n\n".join(clean_lines)
+
+
 def load_file(path: Path, base_dir: Path) -> Document:
     """Load a single file and return a normalized Document."""
     fmt = _detect_format(path)
@@ -42,6 +75,9 @@ def load_file(path: Path, base_dir: Path) -> Document:
     elif fmt == "html":
         raw_text = path.read_text()
         clean_text = _html_to_clean_text(raw_text)
+        metadata = {}
+    elif fmt == "docx":
+        raw_text, clean_text = _docx_to_texts(path)
         metadata = {}
     else:
         raise ValueError(f"unsupported format: {fmt}")
