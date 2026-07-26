@@ -1,6 +1,7 @@
 import tempfile
 from pathlib import Path
 from docx import Document as DocxDocument
+from fpdf import FPDF
 from src.loaders import _detect_format, _read_normalized, load_file
 
 
@@ -15,6 +16,9 @@ def test_detect_format_html():
 
 def test_detect_format_docx():
     assert _detect_format(Path("notes.docx")) == "docx"
+
+def test_detect_format_pdf():
+    assert _detect_format(Path("report.pdf")) == "pdf"
 
 
 def test_read_normalized_strips_crlf(): #clean the file
