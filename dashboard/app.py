@@ -99,9 +99,63 @@ with tab_documents:
     except requests.RequestException as e:
         st.error(f"Couldn't reach the API at {API_BASE_URL}: {e}")
 
-    with st.expander("Re-ingest corpus"):
+    with st.expander("Add documents", expanded=True):
+        st.caption(
+            "1. Choose one or more files.  2. Click **Upload & index**.  3. They'll show up in "
+            "the table above once indexing finishes.\n\n"
+            "Files are saved into `data/corpus/` and the whole corpus is then re-indexed — "
+            "exact duplicates of chunks already indexed are skipped automatically, so "
+            "re-uploading something is harmless."
+        )
+        uploaded_files = st.file_uploader(
+            "md, txt, html, docx, or pdf",
+            type=["md", "txt", "html", "docx", "pdf"],
+            accept_multiple_files=True,
+        )
+        if uploaded_files and st.button("Upload & index"):
+            corpus_path = Path("data/corpus")
+            corpus_path.mkdir(parents=True, exist_ok=True)
+            for uploaded_file in uploaded_files:
+                (corpus_path / uploaded_file.name).write_bytes(uploaded_file.getvalue())
+            with st.spinner("Chunking, embedding, and indexing..."):
+                try:
+                    response = requests.post(
+                        f"{API_BASE_URL}/v1/ingest", json={"corpus_dir": str(corpus_path)}, timeout=300
+                    )
+                    response.raise_for_status()
+                    stats = response.json()
+                    st.success(
+                        f"Uploaded {len(uploaded_files)} file(s), indexed {stats['indexed']} chunks "
+                        f"({stats['deduped']} deduped as exact matches)."
+                    )
+                except requests.RequestException as e:
+                    st.error(f"Ingestion failed: {e}")
+
+    with st.expander("Advanced: re-index from a server-side folder"):
+        st.caption(
+            "**This box takes a folder path, not a file.** And that path is read on the "
+            "computer running the API — which may not be the computer you're looking at this "
+            "page on.\n\n"
+            "- Running everything on one laptop (the normal setup here)? Then \"the API's "
+            "computer\" is just your own machine, and a path like `data/corpus` or "
+            "`C:/Users/you/Documents/reports` works as expected.\n"
+            "- Running via Docker Compose? The API runs inside a container that can only see "
+            "the `./data` folder on your machine (mounted in as `/app/data`). A path outside "
+            "that — even one that exists on your own computer — will fail with a "
+            "\"not found\" error, because the container never sees it.\n\n"
+            "**What it actually does:** on click, it scans *every* supported file "
+            "(.md, .txt, .html, .docx, .pdf) already sitting in that folder and re-embeds and "
+            "re-indexes all of them — not just new ones. Files already indexed are cheap to "
+            "redo (exact duplicates get skipped), but it's still reprocessing the whole folder "
+            "each time, not appending one file.\n\n"
+            "**If you just want to add a file from your own computer, don't use this** — use "
+            "\"Add documents\" above. That one transfers the file through your browser to the "
+            "server for you, so you never have to think about which machine sees which folder. "
+            "This box exists only for files that got onto the server some other way (a script, "
+            "a volume mount, manually copying them there) and now need to be picked up."
+        )
         corpus_dir = st.text_input("Corpus directory", value="data/corpus")
-        if st.button("Ingest"):
+        if st.button("Ingest folder"):
             with st.spinner("Chunking, embedding, and indexing..."):
                 try:
                     response = requests.post(
