@@ -74,11 +74,14 @@ class DenseIndex:
         return self._collection.count()
     
     
-    def query(self, query_embedding: list[float], k: int = 10) -> list[str]:
+    def query(
+        self, query_embedding: list[float], k: int = 10, source_names: list[str] | None = None
+    ) -> list[str]:
         if not query_embedding:
             return []
 
-        result = self._collection.query(query_embeddings=[query_embedding], n_results=k)
+        where = {"source_name": {"$in": source_names}} if source_names else None
+        result = self._collection.query(query_embeddings=[query_embedding], n_results=k, where=where)
         return  result["ids"][0]
 
     def get_texts(self, chunk_ids: list[str]) -> dict[str, str]:
@@ -127,10 +130,12 @@ class SparseIndex:
 
     def __init__(self):
         self.chunk_ids: list[str] = []
+        self.chunk_sources: list[str] = []
         self.bm25: BM25Okapi | None = None
 
     def build(self, chunks: list[Chunk]) -> None:
         self.chunk_ids = [c.chunk_id for c in chunks]
+        self.chunk_sources = [c.source_name for c in chunks]
         corpus = [tokenize(c.text) for c in chunks]
         self.bm25 = BM25Okapi(corpus) if corpus else None
 
@@ -138,7 +143,10 @@ class SparseIndex:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
-            pickle.dump({"chunk_ids": self.chunk_ids, "bm25": self.bm25}, f)
+            pickle.dump(
+                {"chunk_ids": self.chunk_ids, "chunk_sources": self.chunk_sources, "bm25": self.bm25},
+                f,
+            )
 
     @classmethod
     def load(cls, path: str) -> "SparseIndex":
@@ -146,21 +154,26 @@ class SparseIndex:
             data = pickle.load(f)
         index = cls()
         index.chunk_ids = data["chunk_ids"]
+        index.chunk_sources = data.get("chunk_sources", [])
         index.bm25 = data["bm25"]
         return index
-    
-    def query(self, query_tokens: list[str], k: int = 10) -> list[str]:
+
+    def query(self, query_tokens: list[str], k: int = 10, source_names: list[str] | None = None) -> list[str]:
         if self.bm25 is None:
             return []
 
         score = self.bm25.get_scores(query_tokens)
-        paired =zip(self.chunk_ids, score)
-        ranked = sorted(paired, key=lambda pair: pair[1], reverse = True)
+        sources = self.chunk_sources or [None] * len(self.chunk_ids)
+        triples = zip(self.chunk_ids, score, sources)
+        if source_names:
+            allowed = set(source_names)
+            triples = [(cid, s, src) for cid, s, src in triples if src in allowed]
+        ranked = sorted(triples, key=lambda triple: triple[1], reverse=True)
         top_k = ranked[:k]
         result = []
-        for chunk_id, score in top_k:
+        for chunk_id, _, _ in top_k:
             result.append(chunk_id)
-            
+
         return result
         
 

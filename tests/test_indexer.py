@@ -157,6 +157,21 @@ def test_dense_index_get_texts_empty_input_returns_empty_dict(tmp_path):
     assert index.get_texts([]) == {}
 
 
+def test_dense_index_query_filters_by_source_names(tmp_path):
+    index = DenseIndex(persist_dir=str(tmp_path / "chroma"))
+    index.add(
+        [
+            _make_chunk(chunk_id="doc1::0"),  # source_name defaults to "doc1.md"
+            _make_chunk(chunk_id="doc2::0"),  # source_name defaults to "doc2.md"
+        ],
+        [[1.0, 0.0], [0.9, 0.1]],  # both close to the query vector
+    )
+
+    results = index.query([1.0, 0.0], k=10, source_names=["doc2.md"])
+
+    assert results == ["doc2::0"]
+
+
 # --- SparseIndex ---
 
 def test_sparse_index_build_tracks_chunk_ids():
@@ -199,7 +214,31 @@ def test_sparse_index_save_and_load_roundtrip(tmp_path):
     loaded = SparseIndex.load(str(path))
 
     assert loaded.chunk_ids == index.chunk_ids
+    assert loaded.chunk_sources == index.chunk_sources
     assert loaded.bm25 is not None
+
+
+def test_sparse_index_query_filters_by_source_names():
+    chunks = [
+        _make_chunk(chunk_id="doc1::0", text="ERR_2043 troubleshooting guide"),
+        _make_chunk(chunk_id="doc2::0", text="ERR_2043 troubleshooting guide"),  # same text, other doc
+    ]
+    index = SparseIndex()
+    index.build(chunks)
+
+    results = index.query(tokenize("ERR_2043"), k=10, source_names=["doc2.md"])
+
+    assert results == ["doc2::0"]
+
+
+def test_sparse_index_query_source_filter_excludes_all_returns_empty():
+    chunks = [_make_chunk(chunk_id="doc1::0", text="ERR_2043 troubleshooting guide")]
+    index = SparseIndex()
+    index.build(chunks)
+
+    results = index.query(tokenize("ERR_2043"), k=10, source_names=["doc9.md"])
+
+    assert results == []
 
 
 # --- build_indexes ---
