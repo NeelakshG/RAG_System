@@ -63,6 +63,33 @@ def _docx_to_texts(path: Path) -> tuple[str, str]:
     return "\n\n".join(raw_lines), "\n\n".join(clean_lines)
 
 
+def _pdf_to_texts(path: Path) -> tuple[str, str]:
+    """Extract text page-by-page from a PDF. Plain text extraction gives no
+    heading/style info (unlike docx), so there's no markdown-heading
+    synthesis here -- raw_text and clean_text both come from the same
+    per-page extraction. Pages are joined with a blank line so the
+    recursive chunker's paragraph-level splitting treats a page boundary
+    as a natural break instead of fusing the last line of one page into
+    the first line of the next.
+    """
+    from pypdf import PdfReader
+
+    reader = PdfReader(str(path))
+
+    raw_pages = []
+    clean_pages = []
+    for page in reader.pages:
+        text = page.extract_text() or ""
+        if not text.strip():
+            continue
+        raw_pages.append(text)
+
+        clean_lines = [line.strip() for line in text.split("\n") if line.strip()]
+        clean_pages.append("\n".join(clean_lines))
+
+    return "\n\n".join(raw_pages), "\n\n".join(clean_pages)
+
+
 def load_file(path: Path, base_dir: Path) -> Document:
     """Load a single file and return a normalized Document."""
     fmt = _detect_format(path)
@@ -78,6 +105,9 @@ def load_file(path: Path, base_dir: Path) -> Document:
         metadata = {}
     elif fmt == "docx":
         raw_text, clean_text = _docx_to_texts(path)
+        metadata = {}
+    elif fmt == "pdf":
+        raw_text, clean_text = _pdf_to_texts(path)
         metadata = {}
     else:
         raise ValueError(f"unsupported format: {fmt}")

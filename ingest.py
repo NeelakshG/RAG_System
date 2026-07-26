@@ -6,12 +6,12 @@ from src.indexer import build_indexes
 from src.loaders import load_file
 from src.models import Chunk, Document
 
-_SUPPORTED_EXTENSIONS = {"md", "txt", "html", "docx"}
+_SUPPORTED_EXTENSIONS = {"md", "txt", "html", "docx", "pdf"}
 
 
 def discover_files(corpus_dir: Path) -> list[Path]:
     """Return every file under corpus_dir (recursive) whose extension
-    src.loaders.load_file actually supports (md, txt, html).
+    src.loaders.load_file actually supports (md, txt, html, docx, pdf).
     """
     return sorted(
         path
