@@ -6,6 +6,7 @@ from src.llm import (
     SENTENCE_SPLIT_PATTERN,
     CitationCheck,
     OllamaClient,
+    _merge_trailing_citations,
     extract_claims,
     verify_citations,
 )
@@ -40,7 +41,8 @@ def completeness(answer: str) -> float:
     A high score means most of the answer is grounded in cited evidence
     rather than asserted without a source.
     """
-    sentences = [s for s in SENTENCE_SPLIT_PATTERN.split(answer.strip()) if s]
+    raw_sentences = [s for s in SENTENCE_SPLIT_PATTERN.split(answer.strip()) if s]
+    sentences = _merge_trailing_citations(raw_sentences)
     if not sentences:
         return 0.0
     cited_sentences = extract_claims(answer)
