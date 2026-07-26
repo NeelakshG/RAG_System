@@ -9,7 +9,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import requests
 import streamlit as st
 
-from dashboard.components import STYLE, render_badge, render_chunk_card, render_meter, render_strategy_chip
+from dashboard.components import (
+    STYLE,
+    render_badge,
+    render_chunk_card,
+    render_meter,
+    render_sources,
+    render_strategy_chip,
+)
 
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
 COMPARISON_PATH = Path(__file__).resolve().parent.parent / "data" / "eval" / "comparison.json"
@@ -23,29 +30,60 @@ st.caption("Hybrid search, grounded generation, verified citations — all local
 tab_ask, tab_documents, tab_eval = st.tabs(["Ask", "Documents", "Eval comparison"])
 
 with tab_ask:
+    scope = st.radio(
+        "Search scope",
+        ["All documents", "Specific documents"],
+        horizontal=True,
+        help="Restricting to specific documents skips embedding/reranking the rest of the "
+        "corpus for this question -- faster, and avoids spending tokens on irrelevant context.",
+    )
+
+    selected_sources: list[str] = []
+    if scope == "Specific documents":
+        try:
+            docs_response = requests.get(f"{API_BASE_URL}/v1/documents", timeout=30)
+            docs_response.raise_for_status()
+            doc_names = [d["source_name"] for d in docs_response.json()]
+        except requests.RequestException as e:
+            doc_names = []
+            st.error(f"Couldn't load document list: {e}")
+        selected_sources = st.multiselect("Documents to search", doc_names)
+
     with st.form("ask_form"):
         question = st.text_input("Question", placeholder="What does ERR_2043 indicate?")
         use_hybrid = st.toggle("Hybrid search (dense + sparse)", value=True)
         submitted = st.form_submit_button("Ask")
 
     if submitted and question.strip():
-        with st.spinner("Retrieving, generating, and verifying citations..."):
-            try:
-                response = requests.post(
-                    f"{API_BASE_URL}/v1/ask",
-                    json={"question": question, "use_hybrid": use_hybrid},
-                    timeout=180,
-                )
-                response.raise_for_status()
-                st.session_state["last_result"] = response.json()
-            except requests.RequestException as e:
-                st.error(f"Couldn't reach the API at {API_BASE_URL}: {e}")
+        if scope == "Specific documents" and not selected_sources:
+            st.warning('Select at least one document, or switch to "All documents".')
+        else:
+            with st.spinner("Retrieving, generating, and verifying citations..."):
+                try:
+                    payload = {"question": question, "use_hybrid": use_hybrid}
+                    if scope == "Specific documents":
+                        payload["source_names"] = selected_sources
+                    response = requests.post(
+                        f"{API_BASE_URL}/v1/ask",
+                        json=payload,
+                        timeout=180,
+                    )
+                    response.raise_for_status()
+                    st.session_state["last_result"] = response.json()
+                except requests.RequestException as e:
+                    st.error(f"Couldn't reach the API at {API_BASE_URL}: {e}")
 
     result = st.session_state.get("last_result")
     if result:
         answer_text = html.escape(result["answer"])
         fallback_class = " fallback" if result["fallback_triggered"] else ""
         st.markdown(f'<div class="hero-answer{fallback_class}">{answer_text}</div>', unsafe_allow_html=True)
+
+        source_by_chunk_id = {chunk["chunk_id"]: chunk["source_name"] for chunk in result["chunks"]}
+        sources_seen = list(dict.fromkeys(source_by_chunk_id.values()))
+        if sources_seen:
+            st.markdown('<div class="section-label">Sources</div>', unsafe_allow_html=True)
+            st.markdown(render_sources(sources_seen), unsafe_allow_html=True)
 
         col_confidence, col_citations = st.columns(2)
 
@@ -66,7 +104,8 @@ with tab_ask:
                 rows = "".join(
                     '<div style="margin-bottom:10px;">'
                     f'{render_badge(c["supported"])} '
-                    f'<span style="font-size:0.85rem;">[{c["citation_number"]}] {html.escape(c["claim"])}</span>'
+                    f'<span style="font-size:0.85rem;">[{c["citation_number"]}] {html.escape(c["claim"])}</span> '
+                    f'<span class="citation-source">— {html.escape(source_by_chunk_id.get(c["chunk_id"], "unknown"))}</span>'
                     "</div>"
                     for c in result["citations"]
                 )
