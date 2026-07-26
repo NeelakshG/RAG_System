@@ -103,6 +103,16 @@ STYLE = """
   display: inline-block; width: 9px; height: 9px; border-radius: 50%;
   margin-right: 6px; vertical-align: middle;
 }
+
+.source-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);
+  padding: 2px 9px; margin: 0 6px 6px 0; border-radius: 100px;
+  border: 1px solid var(--border); background: var(--surface-2);
+}
+.citation-source {
+  color: var(--text-muted); font-weight: 400;
+}
 </style>
 """
 
@@ -150,6 +160,14 @@ def render_chunk_card(source_name: str, section_heading: str | None, score: floa
         f'<span>score {score:.3f}</span></div>'
         f'<div class="chunk-card-text">{html.escape(preview)}</div></div>'
     )
+
+
+def render_sources(source_names: list[str]) -> str:
+    """One chip per distinct source document behind this answer, in the
+    order chunks were retrieved (i.e. most-relevant document first).
+    """
+    chips = "".join(f'<span class="source-chip">📄 {html.escape(name)}</span>' for name in source_names)
+    return f'<div style="margin-bottom:16px;">{chips}</div>'
 
 
 def render_strategy_chip(strategy: str) -> str:
