@@ -92,3 +92,46 @@ def test_retrieve_dense_only_skips_sparse():
 
     result_ids = {chunk_id for chunk_id, score in result}
     assert result_ids.issubset({"a::0", "b::0", "c::0"})   # never touches sparse's d::0
+
+
+class StubFilterableDenseIndex(StubDenseIndex):
+    """Records whether source_names reached query() -- StubDenseIndex itself
+    has no source_names param, so retrieve() must not pass the kwarg unless
+    a caller actually asked for a filtered search."""
+
+    last_source_names = "not called"
+
+    def query(self, query_embedding, k=10, source_names=None):
+        type(self).last_source_names = source_names
+        return super().query(query_embedding, k)
+
+
+class StubFilterableSparseIndex(StubSparseIndex):
+    last_source_names = "not called"
+
+    def query(self, query_tokens, k=10, source_names=None):
+        type(self).last_source_names = source_names
+        return super().query(query_tokens, k)
+
+
+def test_retrieve_without_source_names_never_passes_the_kwarg():
+    """Default ('all documents') path must keep working against index
+    implementations that don't know about source_names at all."""
+    retrieve(
+        "some query", StubDenseIndex(), StubSparseIndex(),
+        StubQueryEmbedder(), StubReranker(),
+    )  # no source_names -- would raise TypeError if retrieve() always passed the kwarg
+
+
+def test_retrieve_forwards_source_names_to_both_indexes():
+    dense = StubFilterableDenseIndex()
+    sparse = StubFilterableSparseIndex()
+
+    retrieve(
+        "some query", dense, sparse,
+        StubQueryEmbedder(), StubReranker(),
+        source_names=["a.md"],
+    )
+
+    assert StubFilterableDenseIndex.last_source_names == ["a.md"]
+    assert StubFilterableSparseIndex.last_source_names == ["a.md"]
