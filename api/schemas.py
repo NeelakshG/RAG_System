@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class AskRequest(BaseModel):
     question: str
     use_hybrid: bool = True
+    source_names: list[str] | None = None
 
 
 class ChunkOut(BaseModel):

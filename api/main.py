@@ -29,7 +29,9 @@ app = FastAPI(title="RAG Pipeline API", lifespan=lifespan)
 
 @app.post("/v1/ask", response_model=AskResponse)
 def ask(request: AskRequest) -> AskResponse:
-    result = app.state.service.ask(request.question, use_hybrid=request.use_hybrid)
+    result = app.state.service.ask(
+        request.question, use_hybrid=request.use_hybrid, source_names=request.source_names
+    )
     return AskResponse(**result)
 
 
