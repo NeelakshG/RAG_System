@@ -36,7 +36,7 @@ class RAGService:
         except FileNotFoundError:
             self.sparse_index = SparseIndex()
 
-    def ask(self, question: str, use_hybrid: bool = True) -> dict:
+    def ask(self, question: str, use_hybrid: bool = True, source_names: list[str] | None = None) -> dict:
         retrieval_results = retrieve(
             question,
             self.dense_index,
@@ -45,6 +45,7 @@ class RAGService:
             self.reranker,
             self.config,
             use_hybrid=use_hybrid,
+            source_names=source_names,
         )
         chunk_ids = [chunk_id for chunk_id, _ in retrieval_results]
         chunks = self.dense_index.get_chunks(chunk_ids)
