@@ -72,11 +72,17 @@ def retrieve(
     reranker,
     config=None,
     use_hybrid: bool = True,
+    source_names: list[str] | None = None,
 ) -> list[tuple[str, float]]:
     """Run the full retrieval funnel for one query: embed + tokenize ->
     dense/sparse search -> RRF fusion (skipped if use_hybrid=False) ->
     fetch candidate text -> cross-encoder rerank. Returns the final
     (chunk_id, score) pairs, best first.
+
+    source_names, when given, restricts both dense and sparse search to
+    chunks from just those documents -- lets a caller skip embedding/
+    generating over the whole corpus when they already know which doc(s)
+    the answer lives in.
     """
     dense_k = getattr(config, "dense_k", 10)
     sparse_k = getattr(config, "sparse_k", 10)
@@ -87,10 +93,14 @@ def retrieve(
     query_embedding = embedder.embed([query])[0]
     query_tokens = tokenize(query)
 
-    dense_results = dense_index.query(query_embedding, k=dense_k)
+    # Only pass source_names through when it's actually set, so callers
+    # (and test stubs) whose query() doesn't know about this kwarg keep working.
+    dense_filter = {"source_names": source_names} if source_names else {}
+    dense_results = dense_index.query(query_embedding, k=dense_k, **dense_filter)
 
     if use_hybrid:
-        sparse_results = sparse_index.query(query_tokens, k=sparse_k)
+        sparse_filter = {"source_names": source_names} if source_names else {}
+        sparse_results = sparse_index.query(query_tokens, k=sparse_k, **sparse_filter)
         fused = reciprocal_rank_fusion(dense_results, sparse_results, k=rrf_k)
     else:
         fused = dense_results
