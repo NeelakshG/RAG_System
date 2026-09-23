@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
-from api import app
+from api.main import app
+from api.service import RAGService
 from config import Config
 from src.llm import NO_ANSWER_SENTINEL
 from src.models import Chunk
@@ -16,7 +17,7 @@ class StubDenseIndex:
         ),
     }
 
-    def query(self, query_embedding, k=10):
+    def query(self, query_embedding, k=10, source_names=None):
         return list(self._CHUNKS)[:k]
 
     def get_texts(self, chunk_ids):
@@ -27,7 +28,7 @@ class StubDenseIndex:
 
 
 class StubSparseIndex:
-    def query(self, query_tokens, k=10):
+    def query(self, query_tokens, k=10, source_names=None):
         return []
 
 
@@ -57,42 +58,40 @@ class StubClient:
 
 
 def _set_stub_state(answer_text=None, verify_response="YES"):
-    app.state.config = Config()
-    app.state.embedder = StubEmbedder()
-    app.state.reranker = StubReranker()
-    app.state.dense_index = StubDenseIndex()
-    app.state.sparse_index = StubSparseIndex()
+    service = RAGService.__new__(RAGService)  # skip real model/index loading
+    service.config = Config()
+    service.embedder = StubEmbedder()
+    service.reranker = StubReranker()
+    service.dense_index = StubDenseIndex()
+    service.sparse_index = StubSparseIndex()
     kwargs = {"verify_response": verify_response}
     if answer_text is not None:
         kwargs["answer_text"] = answer_text
-    app.state.client = StubClient(**kwargs)
+    service.client = StubClient(**kwargs)
+    app.state.service = service
 
 
 def test_ask_returns_answer_with_citations():
     _set_stub_state()
     client = TestClient(app)
 
-    response = client.post("/v1/ask", json={"query": "what does ERR_2043 mean?"})
+    response = client.post("/v1/ask", json={"question": "what does ERR_2043 mean?"})
 
     assert response.status_code == 200
     body = response.json()
-    assert body["citations"] == [
-        {
-            "number": 1,
-            "chunk_id": "a.md::0",
-            "source_name": "a.md",
-            "text": "ERR_2043 means the upload was dropped.",
-        }
+    assert [(c["citation_number"], c["chunk_id"], c["supported"]) for c in body["citations"]] == [
+        (1, "a.md::0", True)
     ]
+    assert [c["chunk_id"] for c in body["chunks"]] == ["a.md::0"]
     assert body["fallback_triggered"] is False
     assert "[1]" in body["answer"]
 
 
-def test_ask_blank_query_is_rejected():
+def test_ask_blank_question_is_rejected():
     _set_stub_state()
     client = TestClient(app)
 
-    response = client.post("/v1/ask", json={"query": "   "})
+    response = client.post("/v1/ask", json={"question": "   "})
 
     assert response.status_code == 422
 
@@ -101,21 +100,21 @@ def test_ask_no_answer_short_circuits():
     _set_stub_state(answer_text=NO_ANSWER_SENTINEL)
     client = TestClient(app)
 
-    response = client.post("/v1/ask", json={"query": "what does ERR_9999 mean?"})
+    response = client.post("/v1/ask", json={"question": "what does ERR_9999 mean?"})
 
     body = response.json()
     assert body["answer"] == NO_ANSWER_SENTINEL
     assert body["fallback_triggered"] is False
-    assert body["confidence"] == 0.0
+    assert body["confidence"]["composite"] == 0.0
 
 
 def test_ask_low_confidence_falls_back():
     _set_stub_state(verify_response="NO")
     client = TestClient(app)
 
-    response = client.post("/v1/ask", json={"query": "what does ERR_2043 mean?"})
+    response = client.post("/v1/ask", json={"question": "what does ERR_2043 mean?"})
 
     body = response.json()
     assert body["answer"] == NO_ANSWER_SENTINEL
     assert body["fallback_triggered"] is True
-    assert body["confidence"] == 0.0
+    assert body["confidence"]["composite"] == 0.0
