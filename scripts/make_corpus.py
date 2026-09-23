@@ -74,6 +74,7 @@ exponential backoff with a configurable base multiplier. The first attempt
 uses no delay; each subsequent attempt multiplies the previous delay by
 <code>base</code>.</p>
 
+<h2>Retry Policy</h2>
 <p>{DUPLICATE_PARAGRAPH}</p>
 
 <h2>Document Intake Endpoint</h2>
@@ -98,6 +99,7 @@ Maximum number of retry attempts for a failed request to a downstream
 service before the call is abandoned and an error is surfaced to the
 caller. Default: 3.
 
+## Retry Policy
 {DUPLICATE_PARAGRAPH}
 
 ## CACHE_TTL_SECONDS
