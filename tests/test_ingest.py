@@ -49,7 +49,7 @@ def test_discover_files_finds_supported_extensions_recursively(tmp_path):
     (tmp_path / "sub").mkdir()
     (tmp_path / "sub" / "b.txt").write_text("world")
     (tmp_path / "c.html").write_text("<p>hi</p>")
-    (tmp_path / "ignore.pdf").write_text("nope")
+    (tmp_path / "ignore.csv").write_text("nope")
     (tmp_path / "ignore.json").write_text("{}")
 
     found = discover_files(tmp_path)
