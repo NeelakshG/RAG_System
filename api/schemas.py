@@ -1,10 +1,18 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class AskRequest(BaseModel):
     question: str
     use_hybrid: bool = True
     source_names: list[str] | None = None
+
+    @field_validator("question")
+    @classmethod
+    def question_must_not_be_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("question must not be blank")
+        return stripped
 
 
 class ChunkOut(BaseModel):
