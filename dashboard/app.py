@@ -56,9 +56,11 @@ IS_DEMO = BACKEND_MODE == "embedded"
 
 
 @st.cache_resource(show_spinner="Loading models and indexing the demo documents (first visit only)...")
-def get_backend():
-    """One backend per server process, shared by every visitor."""
-    if IS_DEMO:
+def get_backend(mode: str):
+    """One backend per server process, shared by every visitor. `mode` is
+    part of the cache key, so changing RAG_DASHBOARD_BACKEND in the app's
+    secrets takes effect without a reboot."""
+    if mode == "embedded":
         from config import Config
 
         service = build_embedded_service(REPO_ROOT)
@@ -95,7 +97,7 @@ if IS_DEMO:
 else:
     st.caption("Hybrid search, grounded generation, verified citations — all local.")
 
-backend = get_backend()
+backend = get_backend(BACKEND_MODE)
 
 tab_ask, tab_documents, tab_eval = st.tabs(["Ask", "Documents", "Eval comparison"])
 
