@@ -8,3 +8,6 @@ font = "sans serif"
 
 [server]
 headless = true
+# MB. Matches the API's RAG_MAX_UPLOAD_MB default so oversized files are
+# rejected in the browser before they're ever sent.
+maxUploadSize = 10

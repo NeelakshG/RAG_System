@@ -2,11 +2,11 @@ import argparse
 from pathlib import Path
 
 from src.chunkers import get_chunker
-from src.indexer import build_indexes
+from src.indexer import build_index_version, build_indexes, publish_index_version
 from src.loaders import load_file
 from src.models import Chunk, Document
 
-_SUPPORTED_EXTENSIONS = {"md", "txt", "html", "docx", "pdf"}
+SUPPORTED_EXTENSIONS = {"md", "txt", "html", "docx", "pdf"}
 
 
 def discover_files(corpus_dir: Path) -> list[Path]:
@@ -16,7 +16,7 @@ def discover_files(corpus_dir: Path) -> list[Path]:
     return sorted(
         path
         for path in corpus_dir.rglob("*")
-        if path.is_file() and path.suffix.lstrip(".") in _SUPPORTED_EXTENSIONS
+        if path.is_file() and path.suffix.lstrip(".") in SUPPORTED_EXTENSIONS
     )
 
 
@@ -68,18 +68,38 @@ def ingest(corpus_dir: Path, strategy: str = "recursive", config=None, embedder=
     return build_indexes(chunks, embedder, config)
 
 
-def main() -> None:
-    """CLI entry point: argparse --corpus-dir (default data/corpus),
-    --strategy (default 'recursive'), calls ingest(), prints the stats dict.
+def ingest_and_publish(corpus_dir: Path, config, embedder) -> dict:
+    """Production ingest: load -> chunk -> build both indexes into a NEW
+    version directory -> atomically make it the live one. Unlike ingest(),
+    this never rebuilds the live index in place, so it's safe to run while
+    the API is serving queries.
     """
+    docs = load_corpus(corpus_dir)
+    chunks = chunk_corpus(docs, config.strategy, config, embedder)
+    stats, version_dir = build_index_version(chunks, embedder, config)
+    if version_dir is not None:
+        publish_index_version(config, version_dir)
+    return stats
+
+
+def main() -> None:
+    """CLI entry point: argparse --corpus-dir (default: config.corpus_dir),
+    --strategy (default: config.strategy), builds + publishes a new index
+    version, prints the stats dict. A running API keeps serving its old
+    index until it's restarted or POST /v1/ingest is called.
+    """
+    from config import Config
+
+    config = Config()
     parser = argparse.ArgumentParser()
-    parser.add_argument("--corpus-dir", type=Path, default=Path("data/corpus"))
+    parser.add_argument("--corpus-dir", type=Path, default=Path(config.corpus_dir))
     parser.add_argument(
-        "--strategy", default="recursive", choices=["fixed", "recursive", "semantic"]
+        "--strategy", default=config.strategy, choices=["fixed", "recursive", "semantic"]
     )
     args = parser.parse_args()
 
-    stats = ingest(args.corpus_dir, strategy=args.strategy)
+    config = Config(strategy=args.strategy)
+    stats = ingest_and_publish(args.corpus_dir, config, SentenceTransformerEmbedder(config.embedding_model))
     print(stats)
 
 

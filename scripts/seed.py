@@ -16,7 +16,7 @@ from scripts.make_corpus import make_corpus
 
 def main() -> None:
     config = Config()
-    corpus_dir = Path("data/corpus")
+    corpus_dir = Path(config.corpus_dir)
 
     if corpus_dir.exists() and any(corpus_dir.iterdir()):
         print(f"Corpus already exists at {corpus_dir}, skipping generation.")
@@ -32,7 +32,7 @@ def main() -> None:
     from api.service import RAGService  # deferred: this is what loads the embedder
 
     service = RAGService(config)
-    stats = service.ingest(str(corpus_dir))
+    stats = service.ingest()
     print("Done:", stats)
 
 

@@ -1,22 +1,36 @@
-from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal
+
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-@dataclass
-class Config:
+class Config(BaseSettings):
     """Central, config-driven settings for the whole pipeline.
 
-    `strategy` drives the dense/sparse index paths so the three chunking
-    strategies (fixed/recursive/semantic) each get their own index and can
-    never silently drift onto each other's data during the Phase 4 comparison.
+    Every field can be overridden from the environment (or a `.env` file)
+    with a `RAG_` prefix, e.g. `RAG_STRATEGY=semantic`, `RAG_FINAL_K=3`,
+    `RAG_OLLAMA_HOST=http://ollama:11434`.
+
+    `strategy` drives the index paths so the three chunking strategies
+    (fixed/recursive/semantic) each get their own index and can never
+    silently drift onto each other's data during the Phase 4 comparison.
     """
 
-    strategy: str = "recursive"
+    model_config = SettingsConfigDict(env_prefix="RAG_", env_file=".env", extra="ignore")
+
+    strategy: Literal["fixed", "recursive", "semantic"] = "recursive"
 
     # models
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    llm_provider: Literal["ollama", "groq"] = "ollama"  # groq = hosted, for the public demo
     llm_model: str = "llama3.1"
     ollama_host: str = "http://localhost:11434"
+    ollama_timeout_s: float = 60.0  # applies to whichever provider is in use
+    ollama_retries: int = 2
+    groq_api_key: SecretStr | None = None
+    groq_model: str = "llama-3.1-8b-instant"
 
     # chunking
     chunk_size: int = 256
@@ -26,6 +40,7 @@ class Config:
 
     # indexing
     dedup_threshold: float = 0.95
+    index_versions_to_keep: int = 2
 
     # retrieval
     dense_k: int = 10
@@ -37,9 +52,42 @@ class Config:
     # generation
     confidence_threshold: float = 0.5
 
+    # storage
+    data_dir: str = "data"
+    corpus_dir: str = "data/corpus"
+
+    # API
+    api_key: SecretStr | None = None  # unset = no auth (local dev only)
+    max_upload_mb: int = 10
+
+    # public demo (dashboard running the pipeline in-process)
+    demo_new_questions_per_minute: int = 4  # across ALL visitors; protects the free LLM quota
+    demo_questions_per_session: int = 5  # per visitor; cached answers don't count
+
+    @property
+    def index_versions_dir(self) -> Path:
+        """Every build lands in its own subdirectory here; see src/indexer.py."""
+        return Path(self.data_dir) / "indexes" / self.strategy
+
+    @property
+    def current_index_pointer(self) -> Path:
+        """File holding the name of the live index version for this strategy."""
+        return Path(self.data_dir) / f"CURRENT_{self.strategy}"
+
+    def current_index_dir(self) -> Path | None:
+        """The live index version, or None before the first versioned build."""
+        try:
+            name = self.current_index_pointer.read_text().strip()
+        except FileNotFoundError:
+            return None
+        return self.index_versions_dir / name if name else None
+
     @property
     def chroma_persist_dir(self) -> str:
-        return f"data/chroma_{self.strategy}"
+        current = self.current_index_dir()
+        if current is not None:
+            return str(current / "chroma")
+        return str(Path(self.data_dir) / f"chroma_{self.strategy}")  # pre-versioning layout
 
     @property
     def collection_name(self) -> str:
@@ -47,4 +95,7 @@ class Config:
 
     @property
     def bm25_path(self) -> str:
-        return f"data/bm25_{self.strategy}.pkl"
+        current = self.current_index_dir()
+        if current is not None:
+            return str(current / "bm25.pkl")
+        return str(Path(self.data_dir) / f"bm25_{self.strategy}.pkl")  # pre-versioning layout

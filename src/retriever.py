@@ -1,4 +1,6 @@
+import time
 from collections import defaultdict
+from contextlib import contextmanager
 
 from src.tokenizer import tokenize
 
@@ -64,6 +66,17 @@ def rerank(
     return ranked_pairs[:top_n]
 
 
+@contextmanager
+def stage_timer(timings: dict | None, stage: str):
+    """Record the wall time of the block, in ms, under timings[stage]."""
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        if timings is not None:
+            timings[stage] = round((time.perf_counter() - start) * 1000, 1)
+
+
 def retrieve(
     query: str,
     dense_index,
@@ -73,6 +86,7 @@ def retrieve(
     config=None,
     use_hybrid: bool = True,
     source_names: list[str] | None = None,
+    timings: dict | None = None,
 ) -> list[tuple[str, float]]:
     """Run the full retrieval funnel for one query: embed + tokenize ->
     dense/sparse search -> RRF fusion (skipped if use_hybrid=False) ->
@@ -83,6 +97,9 @@ def retrieve(
     chunks from just those documents -- lets a caller skip embedding/
     generating over the whole corpus when they already know which doc(s)
     the answer lives in.
+
+    timings, when given, is filled with per-stage wall time in ms (dense,
+    sparse, fuse, rerank) for request logging.
     """
     dense_k = getattr(config, "dense_k", 10)
     sparse_k = getattr(config, "sparse_k", 10)
@@ -90,24 +107,25 @@ def retrieve(
     fusion_candidates = getattr(config, "fusion_candidates", 20)
     final_k = getattr(config, "final_k", 5)
 
-    query_embedding = embedder.embed([query])[0]
-    query_tokens = tokenize(query)
-
     # Only pass source_names through when it's actually set, so callers
     # (and test stubs) whose query() doesn't know about this kwarg keep working.
-    dense_filter = {"source_names": source_names} if source_names else {}
-    dense_results = dense_index.query(query_embedding, k=dense_k, **dense_filter)
+    source_filter = {"source_names": source_names} if source_names else {}
+
+    with stage_timer(timings, "dense_ms"):
+        query_embedding = embedder.embed([query])[0]
+        dense_results = dense_index.query(query_embedding, k=dense_k, **source_filter)
 
     if use_hybrid:
-        sparse_filter = {"source_names": source_names} if source_names else {}
-        sparse_results = sparse_index.query(query_tokens, k=sparse_k, **sparse_filter)
-        fused = reciprocal_rank_fusion(dense_results, sparse_results, k=rrf_k)
+        with stage_timer(timings, "sparse_ms"):
+            sparse_results = sparse_index.query(tokenize(query), k=sparse_k, **source_filter)
+        with stage_timer(timings, "fuse_ms"):
+            fused = reciprocal_rank_fusion(dense_results, sparse_results, k=rrf_k)
     else:
         fused = dense_results
 
     top_fused = fused[:fusion_candidates]
 
-    texts = dense_index.get_texts(top_fused)
-    candidates = [(chunk_id, texts[chunk_id]) for chunk_id in top_fused]
-
-    return rerank(query, candidates, reranker, top_n=final_k)
+    with stage_timer(timings, "rerank_ms"):
+        texts = dense_index.get_texts(top_fused)
+        candidates = [(chunk_id, texts[chunk_id]) for chunk_id in top_fused]
+        return rerank(query, candidates, reranker, top_n=final_k)

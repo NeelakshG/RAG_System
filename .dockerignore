@@ -5,3 +5,5 @@ __pycache__
 .git
 .claude
 data/
+.env
+.streamlit/secrets.toml

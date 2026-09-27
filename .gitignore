@@ -13,6 +13,10 @@ venv/
 .coverage
 htmlcov/
 
+# Secrets
+.env
+.streamlit/secrets.toml
+
 # Data artifacts (regenerable via ingest.py)
 data/
 

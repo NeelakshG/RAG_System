@@ -1,0 +1,17 @@
+# Dependencies for the hosted demo on Streamlit Community Cloud, which reads
+# the requirements file next to the app (dashboard/app.py) before the root
+# one. Only what the dashboard + in-process pipeline need -- no FastAPI,
+# pytest, etc. -- and CPU-only torch (the default Linux wheel pulls in
+# gigabytes of CUDA libraries the free tier can't use).
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.12.1
+sentence-transformers==5.6.0
+chromadb==1.5.9
+rank-bm25==0.2.2
+streamlit==1.59.1
+requests==2.34.2
+pydantic==2.13.4
+pydantic-settings==2.14.2
+beautifulsoup4==4.15.0
+pypdf==6.14.2
+python-docx==1.2.0

@@ -1,0 +1,237 @@
+[
+  {
+    "question": "What does ERR_2043 indicate?",
+    "use_hybrid": true,
+    "result": {
+      "answer": "ERR_2043 indicates that a document submitted through the internal upload portal never appears in the processing queue, and the submitter receives no confirmation email [1].",
+      "fallback_triggered": false,
+      "confidence": {
+        "retrieval": 0.9917981689596507,
+        "citation": 1.0,
+        "completeness": 1.0,
+        "composite": 0.997258547626619
+      },
+      "chunks": [
+        {
+          "chunk_id": "troubleshooting.md::1",
+          "source_name": "troubleshooting.md",
+          "section_heading": "ERR_2043: Document not received by intake service",
+          "text": "## ERR_2043: Document not received by intake service\n\n**Symptom:** A document submitted through the internal upload portal never\nappears in the processing queue, and the submitter receives no confirmation\nemail.\n\n**Cause:** The intake service silently drops uploads larger than the\nconfigured buffer size before writing to the queue, and does not currently\nemit a failure event when this happens.\n\n**Fix:** Resubmit the document through the CLI uploader (`docctl submit`)\ninstead of the web portal, which retries automatically on drop, or contact\nplatform support to confirm queue depth.\n\n",
+          "score": 4.795162200927734
+        },
+        {
+          "chunk_id": "troubleshooting.md::3",
+          "source_name": "troubleshooting.md",
+          "section_heading": "ERR_3390: Document exceeds maximum size limit",
+          "text": "## ERR_3390: Document exceeds maximum size limit\n\n**Symptom:** Large documents (typically over 5MB) fail intake with a\nsize-limit error, even though smaller documents from the same source submit\nsuccessfully.\n\n**Cause:** The intake service enforces a hard per-document size ceiling to\nbound embedding and indexing latency, and does not currently support chunked\nor streaming uploads.\n\n**Fix:** Split the document into smaller files before submitting, or request\na size-limit exception for bulk historical imports.\n",
+          "score": -3.8287463188171387
+        },
+        {
+          "chunk_id": "troubleshooting.md::2",
+          "source_name": "troubleshooting.md",
+          "section_heading": "ERR_1004: Unsupported document format rejected",
+          "text": "## ERR_1004: Unsupported document format rejected\n\n**Symptom:** The intake service returns an immediate rejection when a\ndocument is submitted in a format outside the supported list (md, txt, html).\n\n**Cause:** The format-detection step only recognizes a fixed allow-list of\nfile extensions and fails closed on anything else, including common types\nlike .docx or .pdf that have not yet been added to the intake pipeline.\n\n**Fix:** Convert the document to a supported format (Markdown is preferred)\nbefore resubmitting, or file a request to add support for the new format.\n\n",
+          "score": -4.2017436027526855
+        },
+        {
+          "chunk_id": "config_guide.txt::0",
+          "source_name": "config_guide.txt",
+          "section_heading": "Configuration Reference",
+          "text": "# Configuration Reference\n\n",
+          "score": -10.45046615600586
+        },
+        {
+          "chunk_id": "api_reference.html::0",
+          "source_name": "api_reference.html",
+          "section_heading": "API Reference",
+          "text": "# API Reference\n \n \n",
+          "score": -10.68392562866211
+        }
+      ],
+      "citations": [
+        {
+          "claim": "ERR_2043 indicates that a document submitted through the internal upload portal never appears in the processing queue, and the submitter receives no confirmation email [1].",
+          "citation_number": 1,
+          "chunk_id": "troubleshooting.md::1",
+          "supported": true
+        }
+      ]
+    }
+  },
+  {
+    "question": "What error and HTTP status code correspond to an oversized document?",
+    "use_hybrid": true,
+    "result": {
+      "answer": "The error corresponding to an oversized document is ERR_3390 [1]. The HTTP status code corresponding to an oversized document is 413 [2].",
+      "fallback_triggered": false,
+      "confidence": {
+        "retrieval": 0.19022080346455708,
+        "citation": 1.0,
+        "completeness": 1.0,
+        "composite": 0.5751123192954641
+      },
+      "chunks": [
+        {
+          "chunk_id": "troubleshooting.md::3",
+          "source_name": "troubleshooting.md",
+          "section_heading": "ERR_3390: Document exceeds maximum size limit",
+          "text": "## ERR_3390: Document exceeds maximum size limit\n\n**Symptom:** Large documents (typically over 5MB) fail intake with a\nsize-limit error, even though smaller documents from the same source submit\nsuccessfully.\n\n**Cause:** The intake service enforces a hard per-document size ceiling to\nbound embedding and indexing latency, and does not currently support chunked\nor streaming uploads.\n\n**Fix:** Split the document into smaller files before submitting, or request\na size-limit exception for bulk historical imports.\n",
+          "score": -1.4485760927200317
+        },
+        {
+          "chunk_id": "api_reference.html::4",
+          "source_name": "api_reference.html",
+          "section_heading": "Document Intake Endpoint",
+          "text": "## Document Intake Endpoint\n \n POST /v1/documents accepts a single document for ingestion. Supported\ncontent types are text/markdown, text/plain, and text/html. Requests\nexceeding the configured size limit are rejected with a 413 status code. \n \n",
+          "score": -4.81845760345459
+        },
+        {
+          "chunk_id": "troubleshooting.md::1",
+          "source_name": "troubleshooting.md",
+          "section_heading": "ERR_2043: Document not received by intake service",
+          "text": "## ERR_2043: Document not received by intake service\n\n**Symptom:** A document submitted through the internal upload portal never\nappears in the processing queue, and the submitter receives no confirmation\nemail.\n\n**Cause:** The intake service silently drops uploads larger than the\nconfigured buffer size before writing to the queue, and does not currently\nemit a failure event when this happens.\n\n**Fix:** Resubmit the document through the CLI uploader (`docctl submit`)\ninstead of the web portal, which retries automatically on drop, or contact\nplatform support to confirm queue depth.\n\n",
+          "score": -9.630870819091797
+        },
+        {
+          "chunk_id": "troubleshooting.md::2",
+          "source_name": "troubleshooting.md",
+          "section_heading": "ERR_1004: Unsupported document format rejected",
+          "text": "## ERR_1004: Unsupported document format rejected\n\n**Symptom:** The intake service returns an immediate rejection when a\ndocument is submitted in a format outside the supported list (md, txt, html).\n\n**Cause:** The format-detection step only recognizes a fixed allow-list of\nfile extensions and fails closed on anything else, including common types\nlike .docx or .pdf that have not yet been added to the intake pipeline.\n\n**Fix:** Convert the document to a supported format (Markdown is preferred)\nbefore resubmitting, or file a request to add support for the new format.\n\n",
+          "score": -10.246352195739746
+        },
+        {
+          "chunk_id": "api_reference.html::0",
+          "source_name": "api_reference.html",
+          "section_heading": "API Reference",
+          "text": "# API Reference\n \n \n",
+          "score": -10.718925476074219
+        }
+      ],
+      "citations": [
+        {
+          "claim": "The error corresponding to an oversized document is ERR_3390 [1].",
+          "citation_number": 1,
+          "chunk_id": "troubleshooting.md::3",
+          "supported": true
+        },
+        {
+          "claim": "The HTTP status code corresponding to an oversized document is 413 [2].",
+          "citation_number": 2,
+          "chunk_id": "api_reference.html::4",
+          "supported": true
+        }
+      ]
+    }
+  },
+  {
+    "question": "What is the default value of MAX_RETRY_COUNT?",
+    "use_hybrid": true,
+    "result": {
+      "answer": "The default value of MAX_RETRY_COUNT is 3 [1].",
+      "fallback_triggered": false,
+      "confidence": {
+        "retrieval": 0.9980227886526226,
+        "citation": 1.0,
+        "completeness": 1.0,
+        "composite": 0.9993404946992491
+      },
+      "chunks": [
+        {
+          "chunk_id": "config_guide.txt::1",
+          "source_name": "config_guide.txt",
+          "section_heading": "MAX_RETRY_COUNT",
+          "text": "## MAX_RETRY_COUNT\nMaximum number of retry attempts for a failed request to a downstream\nservice before the call is abandoned and an error is surfaced to the\ncaller. Default: 3.\n\n",
+          "score": 6.224088668823242
+        },
+        {
+          "chunk_id": "api_reference.html::3",
+          "source_name": "api_reference.html",
+          "section_heading": "Retry Policy",
+          "text": "## Retry Policy\n \n All internal services must implement exponential backoff when retrying failed requests to downstream dependencies. Retries should never exceed the configured maximum attempt count, and clients must respect the Retry-After header when a downstream service provides one. Failure to implement backoff correctly is a common root cause of cascading failures during partial outages. \n \n",
+          "score": -0.5962964296340942
+        },
+        {
+          "chunk_id": "api_reference.html::2",
+          "source_name": "api_reference.html",
+          "section_heading": "calculate_retry_backoff",
+          "text": "### calculate_retry_backoff\n \n def calculate_retry_backoff(attempt: int, base: float = 1.5) -> float: \n Computes the delay in seconds before the next retry attempt, using\nexponential backoff with a configurable base multiplier. The first attempt\nuses no delay; each subsequent attempt multiplies the previous delay by\n base . \n \n",
+          "score": -5.333671569824219
+        },
+        {
+          "chunk_id": "api_reference.html::1",
+          "source_name": "api_reference.html",
+          "section_heading": "Retry Utilities",
+          "text": "## Retry Utilities\n \n The retry utilities module provides helpers for handling transient\nfailures when calling downstream services. \n \n",
+          "score": -8.163352966308594
+        },
+        {
+          "chunk_id": "config_guide.txt::3",
+          "source_name": "config_guide.txt",
+          "section_heading": "CACHE_TTL_SECONDS",
+          "text": "## CACHE_TTL_SECONDS\nHow long a cached embedding or retrieval result is considered valid before\nit must be recomputed. Default: 900 (15 minutes).\n\n",
+          "score": -9.118180274963379
+        }
+      ],
+      "citations": [
+        {
+          "claim": "The default value of MAX_RETRY_COUNT is 3 [1].",
+          "citation_number": 1,
+          "chunk_id": "config_guide.txt::1",
+          "supported": true
+        }
+      ]
+    }
+  },
+  {
+    "question": "Who owns the document intake service?",
+    "use_hybrid": true,
+    "result": {
+      "answer": "I don't know based on the provided context.",
+      "fallback_triggered": false,
+      "confidence": {
+        "retrieval": 0.37494420372602866,
+        "citation": 0.0,
+        "completeness": 0.0,
+        "composite": 0.0
+      },
+      "chunks": [
+        {
+          "chunk_id": "troubleshooting.md::1",
+          "source_name": "troubleshooting.md",
+          "section_heading": "ERR_2043: Document not received by intake service",
+          "text": "## ERR_2043: Document not received by intake service\n\n**Symptom:** A document submitted through the internal upload portal never\nappears in the processing queue, and the submitter receives no confirmation\nemail.\n\n**Cause:** The intake service silently drops uploads larger than the\nconfigured buffer size before writing to the queue, and does not currently\nemit a failure event when this happens.\n\n**Fix:** Resubmit the document through the CLI uploader (`docctl submit`)\ninstead of the web portal, which retries automatically on drop, or contact\nplatform support to confirm queue depth.\n\n",
+          "score": -0.5110636949539185
+        },
+        {
+          "chunk_id": "api_reference.html::4",
+          "source_name": "api_reference.html",
+          "section_heading": "Document Intake Endpoint",
+          "text": "## Document Intake Endpoint\n \n POST /v1/documents accepts a single document for ingestion. Supported\ncontent types are text/markdown, text/plain, and text/html. Requests\nexceeding the configured size limit are rejected with a 413 status code. \n \n",
+          "score": -0.6753198504447937
+        },
+        {
+          "chunk_id": "troubleshooting.md::3",
+          "source_name": "troubleshooting.md",
+          "section_heading": "ERR_3390: Document exceeds maximum size limit",
+          "text": "## ERR_3390: Document exceeds maximum size limit\n\n**Symptom:** Large documents (typically over 5MB) fail intake with a\nsize-limit error, even though smaller documents from the same source submit\nsuccessfully.\n\n**Cause:** The intake service enforces a hard per-document size ceiling to\nbound embedding and indexing latency, and does not currently support chunked\nor streaming uploads.\n\n**Fix:** Split the document into smaller files before submitting, or request\na size-limit exception for bulk historical imports.\n",
+          "score": -1.126563549041748
+        },
+        {
+          "chunk_id": "troubleshooting.md::2",
+          "source_name": "troubleshooting.md",
+          "section_heading": "ERR_1004: Unsupported document format rejected",
+          "text": "## ERR_1004: Unsupported document format rejected\n\n**Symptom:** The intake service returns an immediate rejection when a\ndocument is submitted in a format outside the supported list (md, txt, html).\n\n**Cause:** The format-detection step only recognizes a fixed allow-list of\nfile extensions and fails closed on anything else, including common types\nlike .docx or .pdf that have not yet been added to the intake pipeline.\n\n**Fix:** Convert the document to a supported format (Markdown is preferred)\nbefore resubmitting, or file a request to add support for the new format.\n\n",
+          "score": -1.1507668495178223
+        },
+        {
+          "chunk_id": "api_reference.html::5",
+          "source_name": "api_reference.html",
+          "section_heading": "Health Check Endpoint",
+          "text": "## Health Check Endpoint\n \n GET /v1/health returns the current status of the intake service and its\ndownstream dependencies, including queue depth and last successful\ningestion timestamp.",
+          "score": -5.897655487060547
+        }
+      ],
+      "citations": []
+    }
+  }
+]

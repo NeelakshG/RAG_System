@@ -9,7 +9,8 @@ services:
       # Ollama runs on the host, not in this compose stack -- reuse the
       # model you already have pulled locally instead of re-downloading it
       # into a container. Override if you'd rather run Ollama in compose too.
-      OLLAMA_HOST: http://host.docker.internal:11434
+      RAG_OLLAMA_HOST: http://host.docker.internal:11434
+      RAG_API_KEY: ${RAG_API_KEY:-}
     volumes:
       - ./data:/app/data
     extra_hosts:
@@ -22,5 +23,6 @@ services:
       - "8501:8501"
     environment:
       API_BASE_URL: http://api:8000
+      RAG_API_KEY: ${RAG_API_KEY:-}
     depends_on:
       - api

@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import Config
 from ingest import SentenceTransformerEmbedder, chunk_corpus, load_corpus
 from src.eval import aggregate, load_golden_questions, run_eval
-from src.indexer import DenseIndex, SparseIndex, build_indexes
+from src.indexer import DenseIndex, SparseIndex, build_index_version, publish_index_version
 from src.llm import OllamaClient
 from src.retriever import CrossEncoderReranker
 
@@ -27,7 +27,9 @@ def run_strategy(strategy: str, corpus_dir: Path, embedder, reranker, client) ->
 
     docs = load_corpus(corpus_dir)
     chunks = chunk_corpus(docs, strategy, config, embedder)
-    index_stats = build_indexes(chunks, embedder, config)
+    index_stats, version_dir = build_index_version(chunks, embedder, config)
+    if version_dir is not None:
+        publish_index_version(config, version_dir)
 
     dense_index = DenseIndex(persist_dir=config.chroma_persist_dir, collection_name=config.collection_name)
     sparse_index = SparseIndex.load(config.bm25_path)

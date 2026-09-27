@@ -276,3 +276,51 @@ def test_build_indexes_end_to_end(tmp_path):
 def test_build_indexes_empty_chunks_returns_zero_stats():
     stats = build_indexes([], embedder=None, config=None)
     assert stats == {"indexed": 0, "deduped": 0}
+
+
+# --- versioned builds ---
+
+from config import Config as AppConfig
+from src.indexer import build_index_version, publish_index_version
+
+
+def test_versioned_build_leaves_live_index_untouched_until_published(tmp_path):
+    config = AppConfig(_env_file=None, data_dir=str(tmp_path), strategy="fixed")
+    embedder = StubEmbedder({"alpha": [1.0, 0.0], "beta": [0.0, 1.0]})
+
+    stats, v1 = build_index_version([_make_chunk(chunk_id="a::0", text="alpha")], embedder, config)
+    assert stats == {"indexed": 1, "deduped": 0}
+    assert config.current_index_dir() is None  # built, not yet live
+
+    publish_index_version(config, v1)
+    assert config.current_index_dir() == v1
+
+    _, v2 = build_index_version([_make_chunk(chunk_id="b::0", text="beta")], embedder, config)
+    assert config.current_index_dir() == v1  # still serving v1 while v2 exists
+    assert SparseIndex.load(config.bm25_path).chunk_ids == ["a::0"]
+
+    publish_index_version(config, v2)
+    assert SparseIndex.load(config.bm25_path).chunk_ids == ["b::0"]
+
+
+def test_publish_prunes_old_versions(tmp_path):
+    config = AppConfig(_env_file=None, data_dir=str(tmp_path), strategy="fixed", index_versions_to_keep=2)
+    versions = []
+    for name in ["20260101T000000_a", "20260102T000000_b", "20260103T000000_c"]:
+        version = config.index_versions_dir / name
+        version.mkdir(parents=True)
+        versions.append(version)
+
+    publish_index_version(config, versions[-1])
+
+    remaining = sorted(p.name for p in config.index_versions_dir.iterdir())
+    assert remaining == ["20260102T000000_b", "20260103T000000_c"]
+
+
+def test_build_index_version_with_no_chunks_builds_nothing(tmp_path):
+    config = AppConfig(_env_file=None, data_dir=str(tmp_path))
+
+    stats, version_dir = build_index_version([], embedder=None, config=config)
+
+    assert stats == {"indexed": 0, "deduped": 0}
+    assert version_dir is None

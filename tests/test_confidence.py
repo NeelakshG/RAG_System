@@ -19,3 +19,7 @@ def test_completeness_no_citations_at_all():
 
 def test_completeness_empty_answer_returns_zero():
     assert completeness("") == 0.0
+
+
+def test_completeness_bare_citation_answer_scores_zero():
+    assert completeness("[1]") == 0.0

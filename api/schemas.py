@@ -1,10 +1,16 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
+
+# Hard caps on request size. A question longer than this is almost certainly
+# abuse (it gets embedded, reranked against 20 chunks, and sent to the LLM
+# several times), not a real question.
+MAX_QUESTION_CHARS = 1000
+MAX_SOURCE_NAMES = 100
 
 
 class AskRequest(BaseModel):
-    question: str
+    question: str = Field(max_length=MAX_QUESTION_CHARS)
     use_hybrid: bool = True
-    source_names: list[str] | None = None
+    source_names: list[str] | None = Field(default=None, max_length=MAX_SOURCE_NAMES)
 
     @field_validator("question")
     @classmethod
@@ -45,13 +51,18 @@ class AskResponse(BaseModel):
     citations: list[CitationOut]
 
 
-class IngestRequest(BaseModel):
-    corpus_dir: str = "data/corpus"
-
-
 class IngestResponse(BaseModel):
     indexed: int
     deduped: int
+
+
+class UploadResponse(IngestResponse):
+    uploaded: list[str]
+
+
+class ReadinessOut(BaseModel):
+    ready: bool
+    checks: dict[str, str]
 
 
 class DocumentOut(BaseModel):
