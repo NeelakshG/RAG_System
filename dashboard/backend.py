@@ -11,6 +11,7 @@ BackendError with a message that's safe to show visitors.
 """
 
 import json
+import logging
 import threading
 import time
 from collections import OrderedDict, deque
@@ -29,6 +30,8 @@ EXAMPLE_QUESTIONS = [
     "What is the default value of MAX_RETRY_COUNT?",
     "Who owns the document intake service?",
 ]
+
+logger = logging.getLogger(__name__)
 
 DEMO_ANSWERS_PATH = Path(__file__).resolve().parent / "demo_answers.json"
 
@@ -146,11 +149,13 @@ class EmbeddedBackend:
         try:
             result = self.service.ask(question, use_hybrid=use_hybrid, source_names=source_names)
         except LLMRateLimitedError as e:
+            logger.warning("LLM rate limited: %s", e)
             raise BackendError(
                 "The demo has reached its free usage limit for now. Please try again in a few minutes, "
                 "or pick one of the example questions."
             ) from e
         except LLMUnavailableError as e:
+            logger.error("LLM unavailable: %s", e)  # message carries status codes only, never the key
             raise BackendError("The language model is unavailable right now. Please try again shortly.") from e
 
         with self._lock:  # only successful answers are cached; errors retry next time

@@ -30,7 +30,7 @@ class Config(BaseSettings):
     ollama_timeout_s: float = 60.0  # applies to whichever provider is in use
     ollama_retries: int = 2
     groq_api_key: SecretStr | None = None
-    groq_model: str = "llama-3.1-8b-instant"
+    groq_model: str = "openai/gpt-oss-20b"  # Groq retired free-tier Llama 3.x in Aug 2026
 
     # chunking
     chunk_size: int = 256
@@ -61,7 +61,7 @@ class Config(BaseSettings):
     max_upload_mb: int = 10
 
     # public demo (dashboard running the pipeline in-process)
-    demo_new_questions_per_minute: int = 4  # across ALL visitors; protects the free LLM quota
+    demo_new_questions_per_minute: int = 2  # across ALL visitors; Groq free tier is ~8K tokens/min
     demo_questions_per_session: int = 5  # per visitor; cached answers don't count
 
     @property

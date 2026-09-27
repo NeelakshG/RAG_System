@@ -134,7 +134,7 @@ class GroqClient:
     def __init__(
         self,
         api_key: str,
-        model: str = "llama-3.1-8b-instant",
+        model: str = "openai/gpt-oss-20b",
         timeout: float = 60.0,
         temperature: float = 0.0,
         retries: int = 2,
@@ -161,6 +161,12 @@ class GroqClient:
             "messages": [{"role": "user", "content": prompt}],
             "temperature": self.temperature,
         }
+        if self.model.startswith("openai/gpt-oss"):
+            # Reasoning models: keep thinking short (answers are grounded in 5
+            # passages; the judge is YES/NO) and don't ship the reasoning back
+            # -- both save tokens against the free tier's per-minute cap.
+            payload["reasoning_effort"] = "low"
+            payload["include_reasoning"] = False
         rate_limited = False
         for attempt in range(self.retries + 1):
             wait = self.backoff_s * 2**attempt

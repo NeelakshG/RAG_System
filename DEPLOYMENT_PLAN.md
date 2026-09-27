@@ -24,8 +24,9 @@ Built-in safeguards (all in `dashboard/backend.py`):
 
 ### One-time setup
 1. **Groq key:** sign up at https://console.groq.com (no card), then go to
-   API Keys and create a key. Check the model list for the current Llama 3.1
-   8B id. The default is `llama-3.1-8b-instant`. If it has been renamed, set
+   API Keys and create a key. Check the
+   model list. The default is `openai/gpt-oss-20b` (Groq retired its free-tier
+   Llama 3.x models on 2026-08-16). If that one is retired too, set
    `RAG_GROQ_MODEL` in the secrets.
 2. **Push the code to GitHub** (`main`).
 3. **Streamlit:** go to https://share.streamlit.io, sign in with GitHub,

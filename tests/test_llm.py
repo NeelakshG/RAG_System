@@ -194,7 +194,7 @@ def test_groq_bad_key_is_not_retried(monkeypatch):
 @pytest.mark.parametrize(
     "status, body, expected_ok",
     [
-        (200, {"data": [{"id": "llama-3.1-8b-instant"}]}, True),
+        (200, {"data": [{"id": "openai/gpt-oss-20b"}]}, True),
         (200, {"data": [{"id": "some-other-model"}]}, False),
         (401, {}, False),
     ],
@@ -228,3 +228,23 @@ def test_extract_claims_bare_citation_is_not_a_claim():
     # "supported claim" and scored ~100% confidence.
     assert extract_claims("[1]") == []
     assert extract_claims("[1] [2]") == []
+
+
+def test_groq_gpt_oss_requests_low_effort_without_reasoning_text(monkeypatch):
+    post, calls = _fake_post([_chat("ok")])
+    monkeypatch.setattr(src.llm.requests, "post", post)
+
+    GroqClient(api_key="k", model="openai/gpt-oss-20b").generate("hi")
+
+    assert calls[0]["json"]["reasoning_effort"] == "low"
+    assert calls[0]["json"]["include_reasoning"] is False
+    assert "reasoning_format" not in calls[0]["json"]  # 400s on gpt-oss
+
+
+def test_groq_other_models_get_no_reasoning_params(monkeypatch):
+    post, calls = _fake_post([_chat("ok")])
+    monkeypatch.setattr(src.llm.requests, "post", post)
+
+    GroqClient(api_key="k", model="some-other-model").generate("hi")
+
+    assert "reasoning_effort" not in calls[0]["json"]
